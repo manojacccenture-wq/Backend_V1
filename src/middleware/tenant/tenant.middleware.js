@@ -1,6 +1,6 @@
 import { getRedis } from "../../config/redis/redis.js";
 import { getTenantModel } from "../../modules/global/tenant/models/tenant.model.js";
-import logger from "../../shared/services/logger/logger.js";
+
 
 export const tenantMiddleware = async (req, res, next) => {
   try {
@@ -22,7 +22,7 @@ export const tenantMiddleware = async (req, res, next) => {
 
     if (cached) {
       tenantData = JSON.parse(cached);
-             logger.info(`⚡ Tenant from Redis`);
+             console.log(`⚡ Tenant from Redis`);
     } else {
       // 🔴 2. Fetch from DB
       const Tenant = getTenantModel();
@@ -44,7 +44,7 @@ export const tenantMiddleware = async (req, res, next) => {
       });
 
 
-      logger.info(`💾 Tenant cached in Redis`);
+      console.log(`💾 Tenant cached in Redis`);
     }
 
     // 🔥 Attach to request
@@ -52,7 +52,7 @@ export const tenantMiddleware = async (req, res, next) => {
 
     next();
   } catch (error) {
-    logger.error("Tenant error:", error);
+    console.error("Tenant error:", error);
     res.status(500).json({ msg: "Tenant error" });
   }
 };

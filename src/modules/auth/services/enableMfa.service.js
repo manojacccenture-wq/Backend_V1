@@ -2,20 +2,28 @@
 import jwt from "jsonwebtoken"
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
-import { getUserModel } from "../../global/users/models/user.model.js";
+import { getRedis } from "../../../config/redis/redis.js";
 
 
 export const generateMFA = async (userId, email) => {
-  const User = getUserModel();
+  
+   const redis = getRedis();
 
-  const user = await User.findById(userId);
 
   const secret = speakeasy.generateSecret({
-    name: `MyApp (${email})`,
+    name: `MMSAAS (${email})`,
   });
 
-  // ⚠️ TEMP storage (important)
-  user.mfaTempSecret = secret.base32;
+    // ✅ Store in Redis (NOT DB)
+  await redis.setEx(
+    `mfa:setup:${userId}`,
+    300, // 5 minutes
+    JSON.stringify({
+      tempSecret: secret.base32,
+    })
+  );
+
+
 
   const payload = {
     userId: userId,
@@ -26,11 +34,6 @@ export const generateMFA = async (userId, email) => {
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: "3m",
   });
-
-
-
-
-  await user.save();
 
   const qrCode = await QRCode.toDataURL(secret.otpauth_url);
 

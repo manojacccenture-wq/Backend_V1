@@ -30,22 +30,19 @@ const userSchema = new mongoose.Schema({
   },
   mfaTempSecret: String,
 
-  emailOtp: {
-    type: String,
+  mfaEnabled: {
+    type: Boolean,
+    default: false,
   },
 
-  emailOtpExpires: {
-    type: Date,
-  },
-  emailOtpAttempts: {
-    type: Number,
-    default: 0,
+  isFirstTimeLogin: {
+    type: Boolean,
+    default: false,
   },
 
-  emailOtpLastSent: {
-    type: Date,
-  },
-});
+}
+  , { timestamps: true }
+);
 
 export const getUserModel = () => {
   const db = getGlobalDB();

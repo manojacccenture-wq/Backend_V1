@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { getCustomerModel } from "../models/crm.model.js";
 
-import { getDBConnection } from "../../../utils/dbSwitcher/dbSwitcher.js";
+import { getDBConnection } from "../../../shared/utils/dbSwitcher/dbSwitcher.js";
 
 
 export const getCustomers = async (req, res) => {
@@ -27,7 +27,6 @@ export const getCustomers = async (req, res) => {
 
     res.json(customers);
   } catch (error) {
-    console.error(error);
     res.status(500).json({ msg: "Error fetching customers" });
   }
 };

@@ -2,34 +2,47 @@ import speakeasy from "speakeasy";
 import { getUserModel } from "../../global/users/models/user.model.js";
 import { getRedis } from "../../../config/redis/redis.js";
 import crypto from "crypto";
-import logger from "../../../shared/services/logger/logger.js";
+
 
 export const verifyLoginService = async (userId, otp, type) => {
-  logger.info("Verifying login MFA", { userId, type });
-  logger.info("OTP received", { otp });
-  const User = getUserModel();
+  
 
-  const user = await User.findById(userId);
-  if (!user) throw new Error("User not found");
+
+  const redis = getRedis();
+
+  const sessionKey = `auth:session:${userId}`;
+  const sessionData = await redis.get(sessionKey);
+  
+
+  if (!sessionData) {
+    throw new Error("Session expired. Please login again.");
+  }
+
+
+  const session = JSON.parse(sessionData);
+  // 🚨 VALIDATE TYPE FROM SESSION
+  
+  if (session.type !== type) {
+    throw new Error("Invalid authentication flow");
+  }
 
   // =========================
   // MFA (TOTP)
   // =========================
   if (type === "mfa") {
 
-    if (!user.mfaSecret) {
+    if (!session.mfaSecret) {
       throw new Error("MFA not properly configured");
     }
 
-    logger.info("SECRET DEBUG", {
-      mfaSecret: user.mfaSecret,
-    });
-    const verified = speakeasy.totp({
-      secret: user.mfaSecret,
+
+    const verified = speakeasy.totp.verify({
+      secret: session.mfaSecret,
       encoding: "base32",
       token: String(otp), // 🔥 force string
-      window: 1,
+      window: 1, // allow 30s before or after
     });
+    
 
     if (!verified) throw new Error("Invalid OTP");
   }
@@ -40,9 +53,10 @@ export const verifyLoginService = async (userId, otp, type) => {
   else if (type === "email_otp") {
     const redis = getRedis();
 
-    const key = `otp:${user.tenantId}:${userId}`;
+    const key = `auth:otp:${session.tenantId}:${userId}`;
 
     const storedOtp = await redis.get(key);
+
 
 
 
@@ -67,5 +81,12 @@ export const verifyLoginService = async (userId, otp, type) => {
     throw new Error("Invalid token type");
   }
 
-  return user;
+  await redis.del(`auth:session:${userId}`);
+
+  return {
+    _id: session.userId,
+    tenantId: session.tenantId,
+    email: session.email,
+    isFirstTimeLogin: session.isFirstTimeLogin
+  };
 };

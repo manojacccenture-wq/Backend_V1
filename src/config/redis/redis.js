@@ -1,5 +1,5 @@
 import { createClient } from "redis";
-import logger from "../../shared/services/logger/logger.js";
+
 
 let redisClient;
 
@@ -10,16 +10,16 @@ export const connectRedis = async () => {
     });
 
     redisClient.on("connect", () => {
-          logger.info(`🚀 Redis Connected`);
+          console.log(`🚀 Redis Connected`);
     });
 
     redisClient.on("error", (err) => {
-      logger.error("Redis Error:", err);
+      console.error("Redis Error:", err);
     });
 
     await redisClient.connect();
   } catch (error) {
-    logger.error("Error connecting to Redis:", error);
+    console.error("Error connecting to Redis:", error);
   }
 };
 

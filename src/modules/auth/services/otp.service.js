@@ -5,8 +5,8 @@ import crypto from "crypto";
 export const generateEmailOtp = async (user) => {
   const redis = getRedis();
 
-  const otpKey = `otp:${user.tenantId}:${user._id}`;
-  const cooldownKey = `otp_cooldown:${user.tenantId}:${user._id}`;
+const otpKey = `auth:otp:${user.tenantId}:${user._id}`;
+const cooldownKey = `auth:otp:cooldown:${user.tenantId}:${user._id}`;
 
   // 🔒 cooldown check (30 sec)
   const cooldown = await redis.get(cooldownKey);

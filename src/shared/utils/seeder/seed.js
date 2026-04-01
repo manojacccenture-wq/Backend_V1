@@ -1,13 +1,13 @@
 import speakeasy from "speakeasy";
-import { getTenantModel } from "../../modules/global/tenant/models/tenant.model.js";
-import { getUserModel } from "../../modules/global/users/models/user.model.js";
-import { getProductModel } from "../../modules/global/products/models/product.model.js";
-import { assignProductToUser } from "../../modules/global/userProduct/services/userProduct.service.js";
-import { hashPassword } from "../../shared/services/hashPassword/hash.service.js";
-import logger from "../../shared/services/logger/logger.js";
+import { getTenantModel } from "../../../modules/global/tenant/models/tenant.model.js";
+import { getUserModel } from "../../../modules/global/users/models/user.model.js";
+import { getProductModel } from "../../../modules/global/products/models/product.model.js";
+import { assignProductToUser } from "../../../modules/global/userProduct/services/userProduct.service.js";
+import { hashPassword } from "../../services/hashPassword/hash.service.js";
+
 
 export const seedData = async () => {
-  logger.info("🌱 Seeding data...");
+  console.log("🌱 Seeding data...");
 
   const Tenant = getTenantModel();
   const User = getUserModel();
@@ -88,5 +88,5 @@ const mfaSecret = speakeasy.generateSecret({
     tenantId: enterpriseTenant._id,
   });
 
-  logger.info("✅ Seed completed");
+  console.log("✅ Seed completed");
 };
