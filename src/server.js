@@ -16,8 +16,7 @@ const init = async () => {
   }
 };
 
-// 🔥 This runs on every request (serverless)
 export default async function handler(req, res) {
   await init();
-  return app(req, res);
+  return app(req, res); // 🔥 THIS IS THE FIX
 }

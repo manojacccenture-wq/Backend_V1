@@ -10,6 +10,10 @@ const allowedOrigins = [
   "https://mmsaas.vercel.app"
 ];
 
+
+app.use(express.json());
+app.use(cookieParser());
+
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -28,8 +32,6 @@ app.use(
 
 // Middleware
 
-app.use(express.json());
-app.use(cookieParser());
 
 app.use("/v1", routesIndex)
 app.use(errorMiddleware);
