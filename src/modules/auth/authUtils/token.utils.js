@@ -11,7 +11,6 @@ export const generateTempToken = (userId, tenantId, type) => {
 };
 
 export const generateAccessToken = (user) => {
-  console.log('user: Inside generateAccessToken ', user)
   return jwt.sign(
     {
       userId: user._id,
