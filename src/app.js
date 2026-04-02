@@ -1,5 +1,7 @@
-import cors from "cors"
 import express from "express";
+import cors from "cors"
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import routesIndex from "./routes/v1/index.js"
 import { errorMiddleware } from "./shared/middleware/errorHanlder/error.middleware.js"
@@ -10,9 +12,13 @@ const allowedOrigins = [
   "https://mmsaas.vercel.app"
 ];
 
-
-app.use(express.json());
-app.use(cookieParser());
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // Limit each IP to 100 requests per `window`
+  message: 'Too many requests, please try again later.',
+  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
+  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+});
 
 app.use(
   cors({
@@ -30,6 +36,26 @@ app.use(
   })
 );
 
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // 🔥 important for now
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+
+
+app.use(limiter);
+
+
+
+
+// Apply the rate limiting middleware to all requests
+
+app.use(express.json());
+app.use(cookieParser());
+
+
 // Middleware
 
 
@@ -39,3 +65,23 @@ app.use(errorMiddleware);
 
 
 export default app;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// app.use(
+//   helmet({
+//     contentSecurityPolicy: false, // disable if issues occur
+//   })
+// );

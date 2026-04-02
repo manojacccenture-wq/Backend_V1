@@ -40,7 +40,7 @@ export const enableMFA = asyncHandler(async (req, res) => {
   }
 
   const { qrCode, token } = await generateMFA(userId, email);
-  
+
   setMfaSetupCookie(res, token);
 
   res.json({
@@ -72,7 +72,7 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
     userAgent: req.headers["user-agent"],
     createdAt: Date.now(),
   };
-  
+
 
   await redis.set(
     `refresh:${user._id}:${sessionId}`,
@@ -91,7 +91,7 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
   });
 });
 
-export const verifyMFASetup =asyncHandler( async (req, res) => {
+export const verifyMFASetup = asyncHandler(async (req, res) => {
   try {
     const { token } = req.body;
 
@@ -112,8 +112,8 @@ export const refreshToken = asyncHandler(async (req, res) => {
   const { accessToken, refreshToken } =
     await refreshTokenService(token);
 
-  res.cookie("accessToken", accessToken, { httpOnly: true });
-  res.cookie("refreshToken", refreshToken, { httpOnly: true });
+  setAuthCookie(res, accessToken, refreshToken);
+
 
   res.json({ msg: "Token rotated" });
 });
