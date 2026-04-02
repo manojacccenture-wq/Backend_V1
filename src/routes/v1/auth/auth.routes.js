@@ -1,5 +1,5 @@
 import express from "express";
-import { login ,verifyMFASetup,enableMFA,verifyLoginMFA,refreshToken,logout} from "../../../modules/auth/controller/v1/auth.controller.js";
+import { login ,verifyMFASetup,enableMFA,verifyLoginMFA,refreshToken,logout, getMe} from "../../../modules/auth/controller/v1/auth.controller.js";
 import { tempAuthMiddleware } from "../../../modules/auth/middleware/temp.middleware.js";
 import { accessAuthMiddleware } from "../../../modules/auth/middleware/access.middleware.js";
 import { mfaSetupMiddleware } from "../../../modules/auth/middleware/mfaSetup.middleware.js";
@@ -24,5 +24,8 @@ router.post("/refresh", refreshToken);
 
 //  To clear all cookies and other things
 router.post("/logout", accessAuthMiddleware, logout);
+
+// To check user is authenticated or not and to get user details
+router.get("/me", accessAuthMiddleware, getMe);
 
 export default router;

@@ -45,7 +45,8 @@ export const loginService = async (email, password) => {
   
   if (user.mfaEnabled) {
     const token = generateTempToken(user._id, user.tenantId, "mfa");
-
+    
+    
     await redis.setEx(
       `auth:session:${user._id}`,
       300,

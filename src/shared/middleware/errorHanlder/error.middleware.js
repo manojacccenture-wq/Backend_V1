@@ -1,26 +1,35 @@
 const isProd = process.env.NODE_ENV === "production";
-console.log('isProd: ', isProd)
 
 export const errorMiddleware = (err, req, res, next) => {
-  const statusCode = err.statusCode || 500;
-
-  // 🔥 Log full error always (for debugging)
   console.error("❌ ERROR:", err);
 
-  // ✅ DEV → full details
-  if (!isProd) {
-    return res.status(statusCode).json({
-      success: false,
-      message: err.message,
-      stack: err.stack,
-    });
+  let statusCode = err.statusCode || 500;
+  let message = err.message || "Internal server error";
+
+  // 🔥 Normalize common errors
+  if (err.name === "TokenExpiredError") {
+    statusCode = 401;
+    message = "Access token expired";
   }
 
-  // 🔒 PROD → safe response
+  if (err.name === "JsonWebTokenError") {
+    statusCode = 401;
+    message = "Invalid token";
+  }
+
+  if (err.name === "CastError") {
+    statusCode = 400;
+    message = "Invalid ID format";
+  }
+
+  // 🔒 PROD safe response
+  if (isProd && statusCode === 500) {
+    message = "Internal server error";
+  }
+
   return res.status(statusCode).json({
     success: false,
-    message: statusCode === 500
-      ? "Internal server error"
-      : err.message,
+    message,
+    ...(isProd ? {} : { stack: err.stack }),
   });
 };

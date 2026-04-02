@@ -1,5 +1,4 @@
 import speakeasy from "speakeasy";
-import { getUserModel } from "../../global/users/models/user.model.js";
 import { getRedis } from "../../../config/redis/redis.js";
 import crypto from "crypto";
 
@@ -12,6 +11,7 @@ export const verifyLoginService = async (userId, otp, type) => {
 
   const sessionKey = `auth:session:${userId}`;
   const sessionData = await redis.get(sessionKey);
+  
   
 
   if (!sessionData) {

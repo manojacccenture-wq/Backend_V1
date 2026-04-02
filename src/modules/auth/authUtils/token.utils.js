@@ -11,6 +11,7 @@ export const generateTempToken = (userId, tenantId, type) => {
 };
 
 export const generateAccessToken = (user) => {
+  console.log('user: Inside generateAccessToken ', user)
   return jwt.sign(
     {
       userId: user._id,
@@ -20,7 +21,6 @@ export const generateAccessToken = (user) => {
       type: "access",
     },
     process.env.JWT_SECRET,
-    // { expiresIn: "1d" }
     { expiresIn: "15m" }
   );
 };
@@ -31,7 +31,7 @@ export const generateRefreshToken = (user,sessionId) => {
     {
       userId: user._id,
       tenantId: user.tenantId,
-      sessionId, 
+      sessionId: sessionId, 
       type: "refresh",
     },
     process.env.JWT_REFRESH_SECRET,

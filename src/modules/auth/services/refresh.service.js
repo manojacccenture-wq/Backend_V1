@@ -4,6 +4,7 @@ import { generateAccessToken, generateRefreshToken, hashToken } from "../authUti
 import { getRedis } from "../../../config/redis/redis.js";
 
 export const refreshTokenService = async (token) => {
+
   if (!token) {
     throw new Error("No refresh token");
   }
@@ -14,10 +15,13 @@ export const refreshTokenService = async (token) => {
     throw new Error("Invalid token type");
   }
 
+  console.log('decoded: ', decoded)
   const { userId, sessionId } = decoded;
 
   const redis = getRedis();
   const key = `refresh:${userId}:${sessionId}`;
+  console.log('sessionId In Refresh Service: ', sessionId)
+
 
   const sessionData = await redis.get(key);
 
