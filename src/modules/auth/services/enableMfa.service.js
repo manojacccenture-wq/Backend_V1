@@ -27,14 +27,14 @@ export const generateMFA = async (userId, email) => {
 
   const payload = {
     userId: userId,
-    "type":"mfa"
+    "type":"mfa_setup"
   };
 
 
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: "3m",
   });
-
+  
   const qrCode = await QRCode.toDataURL(secret.otpauth_url);
 
   return {

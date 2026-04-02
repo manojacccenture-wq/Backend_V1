@@ -11,6 +11,7 @@ export const mfaSetupMiddleware = (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+
     if (decoded.type !== "mfa_setup") {
       return res.status(403).json({ msg: "Invalid MFA setup token" });
     }

@@ -40,7 +40,7 @@ export const enableMFA = asyncHandler(async (req, res) => {
   }
 
   const { qrCode, token } = await generateMFA(userId, email);
-
+  
   setMfaSetupCookie(res, token);
 
   res.json({
@@ -73,7 +73,7 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
     createdAt: Date.now(),
   };
   
-  console.log('AFter Login  sessionId: ', sessionId)
+
   await redis.set(
     `refresh:${user._id}:${sessionId}`,
     JSON.stringify(sessionData),
