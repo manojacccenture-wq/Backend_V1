@@ -17,6 +17,7 @@ export const generateAccessToken = (user) => {
       tenantId: user.tenantId,
       products: user.products,
       email: user.email,
+      permissions: user.permissions || [],
       type: "access",
     },
     process.env.JWT_SECRET,

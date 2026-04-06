@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import app from "./app.js";
 import { connectDB } from "./config/db/db.js";
 import { connectRedis } from "./config/redis/redis.js";
+import { seedData } from "./shared/utils/seeder/seed.js";
 
 
 dotenv.config();
@@ -16,7 +17,7 @@ const startServer = async () => {
   // await seedData();
 
   app.listen(PORT, () => {
-    console.log(" Server running on port ${PORT}")
+    console.log(` Server running on port ${PORT}`)
   });
 };
 

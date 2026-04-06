@@ -1,14 +1,20 @@
 import mongoose from "mongoose";
 import { getGlobalDB } from "../../../../config/db/db.js";
 
-const roleSchema = new mongoose.Schema(
+const membershipSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
     },
 
-    // 🔥 VERY IMPORTANT
+    roleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Role",
+      required: true,
+    },
+
     scope: {
       type: String,
       enum: ["platform", "tenant", "product"],
@@ -27,17 +33,17 @@ const roleSchema = new mongoose.Schema(
       default: null,
     },
 
-    isSystem: {
+    isActive: {
       type: Boolean,
-      default: false, // default roles like SUPER_ADMIN
+      default: true,
     },
   },
   { timestamps: true }
 );
 
-export const getRoleModel = () => {
+export const getMembershipModel = () => {
   const db = getGlobalDB();
   if (!db) throw new Error("Global DB not initialized");
 
-  return db.models.Role || db.model("Role", roleSchema);
+  return db.models.Membership || db.model("Membership", membershipSchema);
 };

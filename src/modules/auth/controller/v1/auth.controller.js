@@ -4,6 +4,7 @@ import { loginService } from "../../services/login.service.js";
 import { generateMFA } from "../../services/enableMfa.service.js";
 import { verifyMFASetupService } from "../../services/verifyMFASetup.service.js";
 import { verifyLoginService } from "../../services/verifyAuth.service.js";
+import { getUserPermissions } from "../../services/permission.service.js";
 import { generateAccessToken, generateRefreshToken, hashToken } from "../../authUtils/token.utils.js";
 import { clearAuthCookie, setAuthCookie, setMfaSetupCookie, setTempAuthCookie } from "../../../../shared/utils/cookies/cookie.util.js";
 
@@ -59,10 +60,17 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
 
   const user = await verifyLoginService(userId, token, type);
 
+
   const redis = getRedis();
   const sessionId = generateSessionId();
 
-  const accessToken = generateAccessToken(user);
+  // const accessToken = generateAccessToken(user);
+  const permissions = await getUserPermissions(user._id);
+
+   const accessToken = generateAccessToken({
+   ...user,
+   permissions,
+ });
   const refreshToken = generateRefreshToken(user, sessionId);
 
   // 🔥 SaaS-grade device tracking

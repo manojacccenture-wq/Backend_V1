@@ -4,7 +4,14 @@ import { getTenantModel } from "../../modules/global/tenant/models/tenant.model.
 
 export const tenantMiddleware = async (req, res, next) => {
   try {
-    const tenantId = req.user.tenantId;
+    // const tenantId = req.user.tenantId;
+
+    const tenantId =
+      req.headers["x-tenant-id"] || req.query.tenantId;
+
+    if (!tenantId) {
+      return res.status(400).json({ msg: "TenantId required" });
+    }
 
     const redis = getRedis();
 
@@ -22,7 +29,7 @@ export const tenantMiddleware = async (req, res, next) => {
 
     if (cached) {
       tenantData = JSON.parse(cached);
-             console.log(`⚡ Tenant from Redis`);
+      console.log(`⚡ Tenant from Redis`);
     } else {
       // 🔴 2. Fetch from DB
       const Tenant = getTenantModel();
