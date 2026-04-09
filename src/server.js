@@ -11,6 +11,7 @@ const init = async () => {
   if (!isConnected) {
     await connectDB();
     await connectRedis();
+    initModels();
     isConnected = true;
     console.log("✅ DB + Redis connected");
   }

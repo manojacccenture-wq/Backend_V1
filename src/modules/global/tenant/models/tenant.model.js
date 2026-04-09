@@ -8,8 +8,15 @@ const tenantSchema = new mongoose.Schema({
     enum: ["shared", "isolated"],
     default: "shared",
   },
-  dbName: String,
-  isActive:Boolean
+  dbName: {
+    type: String,
+    unique: true,
+    sparse: true, // because shared tenants may have null
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+  }
 });
 
 export const getTenantModel = () => {

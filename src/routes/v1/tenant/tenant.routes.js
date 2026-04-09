@@ -1,12 +1,13 @@
 import express from "express";
-import {resolver} from "../../../modules/global/tenant/controller/v1/tenant.controller.js"
-
-import {tenantMiddleware} from "../../../middleware/tenant/tenant.middleware.js"
+import { createTenantController, getTenantsController,getTenantUsersController } from "../../../modules/global/tenant/controller/v1/tenant.controller.js";
 
 const router = express.Router();
 
-// simple login
-router.get("/resolver", /* authMiddleware, */tenantMiddleware,resolver);
+// Creation of Tenant
+router.post("/create-with-admin", createTenantController);
+router.get("/", getTenantsController);
+router.get("/:tenantId/users", getTenantUsersController);
+
 
 
 export default router;

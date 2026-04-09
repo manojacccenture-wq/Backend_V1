@@ -1,10 +1,24 @@
+import { ZodError } from "zod";
+
 const isProd = process.env.NODE_ENV === "production";
 
 export const errorMiddleware = (err, req, res, next) => {
-  console.error("❌ ERROR:", err);
 
   let statusCode = err.statusCode || 500;
   let message = err.message || "Internal server error";
+
+  // 🔥 ZOD VALIDATION ERROR
+  if (err instanceof ZodError) {
+    statusCode = 400;
+    return res.status(statusCode).json({
+      success: false,
+      errors: err.errors.map((e) => ({
+        field: e.path[0],
+        message: e.message,
+      })),
+    });
+  }
+
 
   // 🔥 Normalize common errors
   if (err.name === "TokenExpiredError") {

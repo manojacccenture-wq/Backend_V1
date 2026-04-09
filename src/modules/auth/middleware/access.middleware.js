@@ -10,7 +10,6 @@ export const accessAuthMiddleware = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     if (decoded.type !== "access") {
       return res.status(403).json({ msg: "Invalid access token" });
     }

@@ -7,26 +7,23 @@ const userProductSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  productId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
-    required: true,
-  },
   tenantId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Tenant",
     required: true,
   },
-  role: {
-    type: String,
-    enum: ["admin", "user"],
-    default: "user",
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
   },
-  status: {
-    type: String,
-    enum: ["active", "inactive"],
-    default: "active",
-  },
+
+
+  // status: {
+  //   type: String,
+  //   enum: ["active", "inactive"],
+  //   default: "active",
+  // },
 
   isActive: {
     type: Boolean,

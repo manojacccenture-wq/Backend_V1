@@ -2,6 +2,7 @@ import speakeasy from "speakeasy";
 import { getTenantModel } from "../../../modules/global/tenant/models/tenant.model.js";
 import { getUserModel } from "../../../modules/global/users/models/user.model.js";
 import { getProductModel } from "../../../modules/global/products/models/product.model.js";
+import { getTenantProductModel } from "../../../modules/global/tenantProduct/models/tenantProduct.model.js";
 import { getMembershipModel } from "../../../modules/global/membership/models/membership.model.js";
 import { assignProductToUser } from "../../../modules/global/userProduct/services/userProduct.service.js";
 import { hashPassword } from "../../services/hashPassword/hash.service.js";
@@ -13,28 +14,32 @@ export const seedData = async () => {
   console.log("🌱 Seeding data...");
 
   await seedRBAC();
+
   const Tenant = getTenantModel();
   const User = getUserModel();
   const Product = getProductModel();
+  const TenantProduct = getTenantProductModel();
   const Membership = getMembershipModel();
-  const Role = getRoleModel()
+  const Role = getRoleModel();
 
+  await Promise.all([
+    Tenant.deleteMany(),
+    User.deleteMany(),
+    Product.deleteMany(),
+    TenantProduct.deleteMany(),
+    Membership.deleteMany(),
+  ]);
 
-  await Tenant.deleteMany();
-  await User.deleteMany();
-  await Product.deleteMany();
-  await Membership.deleteMany();
+  // ROLES
+const superAdminRole = await Role.findOne({ code: "SUPER_ADMIN" });
+const tenantAdminRole = await Role.findOne({ code: "TENANT_ADMIN" });
 
-  // get roles
-const superAdminRole = await Role.findOne({ name: "SUPER_ADMIN" });
-const tenantAdminRole = await Role.findOne({ name: "TENANT_ADMIN" });
-
-  // 🔐 Generate MFA secret for testing
+  // MFA
   const mfaSecret = speakeasy.generateSecret({
     name: "MyApp (shared@user.com)",
   });
 
-  // tenants
+  // TENANTS
   const sharedTenant = await Tenant.create({
     name: "Startup",
     dataMode: "shared",
@@ -48,80 +53,86 @@ const tenantAdminRole = await Role.findOne({ name: "TENANT_ADMIN" });
 
   const password = await hashPassword("123456");
 
-  // users
-  const sharedUser = await User.create({
-    email: "shared@user.com",
+  // USERS
+  const superAdminUser = await User.create({
+    email: "manojacccenture@gmail.com",
     password,
-    tenantId: sharedTenant._id,
-    // 🔐 MFA enabled user (for testing)
     mfaEnabled: true,
     mfaSecret: mfaSecret.base32,
   });
 
-
-
-  
   const enterpriseUser = await User.create({
     email: "enterprise@user.com",
     password,
-    tenantId: enterpriseTenant._id,
   });
 
-  // products
-  const sharedCRM = await Product.create({
+  // =========================
+  // 🌍 GLOBAL PRODUCTS
+  // =========================
+
+  const crm = await Product.create({
     name: "CRM",
-    tenantId: sharedTenant._id,
+    code: "crm",
   });
 
-  const enterpriseCRM = await Product.create({
-    name: "CRM",
-    tenantId: enterpriseTenant._id,
-  });
-
-  const enterpriseBilling = await Product.create({
+  const billing = await Product.create({
     name: "Billing",
-    tenantId: enterpriseTenant._id,
+    code: "billing",
   });
 
+  // =========================
+  // 🏢 TENANT PRODUCT MAPPING
+  // =========================
 
-
-  
-  // 🔥 assign (auto sync)
-  await assignProductToUser({
-    userId: sharedUser._id,
-    productId: sharedCRM._id,
+  // Startup → CRM
+  await TenantProduct.create({
     tenantId: sharedTenant._id,
-    role: "admin",
+    productId: crm._id,
+  });
+
+  // Enterprise → CRM + Billing
+  await TenantProduct.create({
+    tenantId: enterpriseTenant._id,
+    productId: crm._id,
+  });
+
+  await TenantProduct.create({
+    tenantId: enterpriseTenant._id,
+    productId: billing._id,
+  });
+
+  // =========================
+  // 👤 USER PRODUCT ACCESS
+  // =========================
+
+  await assignProductToUser({
+    userId: enterpriseUser._id,
+    tenantId: enterpriseTenant._id,
+    productId: crm._id,
   });
 
   await assignProductToUser({
     userId: enterpriseUser._id,
-    productId: enterpriseCRM._id,
     tenantId: enterpriseTenant._id,
+    productId: billing._id,
   });
 
-  await assignProductToUser({
+  // =========================
+  // 🔐 MEMBERSHIP (RBAC)
+  // =========================
+
+  // SUPER ADMIN
+  await Membership.create({
+    userId: superAdminUser._id,
+    roleId: superAdminRole._id,
+  });
+
+  // TENANT ADMIN
+  await Membership.create({
     userId: enterpriseUser._id,
-    productId: enterpriseBilling._id,
+    roleId: tenantAdminRole._id,
     tenantId: enterpriseTenant._id,
   });
-
-  // assign roles
-
-// 🔥 shared user → SUPER_ADMIN
-await Membership.create({
-  userId: sharedUser._id,
-  roleId: superAdminRole._id,
-  scope: "platform",
-});
-
-// 🔥 enterprise user → TENANT_ADMIN
-await Membership.create({
-  userId: enterpriseUser._id,
-  roleId: tenantAdminRole._id,
-  scope: "tenant",
-  tenantId: enterpriseTenant._id,
-});
 
   console.log("✅ Seed completed");
 };

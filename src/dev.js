@@ -3,6 +3,7 @@ import app from "./app.js";
 import { connectDB } from "./config/db/db.js";
 import { connectRedis } from "./config/redis/redis.js";
 import { seedData } from "./shared/utils/seeder/seed.js";
+import { initModels } from "./config/initModels/initModels.js";
 
 
 dotenv.config();
@@ -14,6 +15,7 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   await connectDB();
   await connectRedis();
+  await initModels();
   // await seedData();
 
   app.listen(PORT, () => {
@@ -28,6 +30,7 @@ const init = async () => {
   if (!isConnected) {
     await connectDB();
     await connectRedis();
+    initModels();
     isConnected = true;
     console.log("✅ DB + Redis connected");
   }

@@ -2,22 +2,22 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
 
-export const generateTempToken = (userId, tenantId, type) => {
+export const generateTempToken = (userId, type) => {
   return jwt.sign(
-    { userId, tenantId, type },
+    { userId,  type },
     process.env.JWT_SECRET,
     { expiresIn: "2m" }
   );
 };
 
-export const generateAccessToken = (user) => {
+
+export const generateAccessToken = (user, contexts, permissions) => {
   return jwt.sign(
     {
       userId: user._id,
-      tenantId: user.tenantId,
-      products: user.products,
       email: user.email,
-      permissions: user.permissions || [],
+      contexts,        // 🔥 NEW
+      permissions,     // optional cache
       type: "access",
     },
     process.env.JWT_SECRET,
@@ -30,7 +30,6 @@ export const generateRefreshToken = (user,sessionId) => {
   return jwt.sign(
     {
       userId: user._id,
-      tenantId: user.tenantId,
       sessionId: sessionId, 
       type: "refresh",
     },

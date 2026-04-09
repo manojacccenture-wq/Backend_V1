@@ -59,7 +59,6 @@ export const tenantMiddleware = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error("Tenant error:", error);
     res.status(500).json({ msg: "Tenant error" });
   }
 };

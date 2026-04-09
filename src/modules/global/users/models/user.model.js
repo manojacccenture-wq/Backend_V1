@@ -2,20 +2,28 @@ import mongoose from "mongoose";
 import { getGlobalDB } from "../../../../config/db/db.js";
 
 const userSchema = new mongoose.Schema({
-  email: String,
-  password: String,
-  tenantId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Tenant",
+  email: {
+    type: String,
+    required: true,
+    lowercase: true,
   },
 
+  password: {
+    type: String,
+    required: true,
+  },
+  // tenantId: {
+  //   type: mongoose.Schema.Types.ObjectId,
+  //   ref: "Tenant",
+  // },
+
   // ⚡ FAST CACHE
-  products: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-    },
-  ],
+  // products: [
+  //   {
+  //     type: mongoose.Schema.Types.ObjectId,
+  //     ref: "Product",
+  //   },
+  // ],
 
   isActive: {
     type: Boolean,

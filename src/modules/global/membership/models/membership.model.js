@@ -15,11 +15,6 @@ const membershipSchema = new mongoose.Schema(
       required: true,
     },
 
-    scope: {
-      type: String,
-      enum: ["platform", "tenant", "product"],
-      required: true,
-    },
 
     tenantId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -39,6 +34,11 @@ const membershipSchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
+);
+
+membershipSchema.index(
+  { userId: 1, tenantId: 1, productId: 1 },
+  { unique: true }
 );
 
 export const getMembershipModel = () => {

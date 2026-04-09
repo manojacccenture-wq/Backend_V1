@@ -23,15 +23,13 @@ export const loginService = async (email, password) => {
     return {
       emailOtpRequired: !session.mfaEnabled,
       mfaRequired: session.mfaEnabled,
-      token: generateTempToken(session.userId, session.tenantId, session.mfaEnabled ? "mfa" : "email_otp"),
+      token: generateTempToken(session.userId,  session.mfaEnabled ? "mfa" : "email_otp"),
     };
   }
 
 
   //  only hit DB if no session
-  const user = await User.findOne({ email }).select(
-    "_id password tenantId email mfaEnabled mfaSecret isFirstTimeLogin"
-  );
+  const user = await User.findOne({ email }).select("_id password email mfaEnabled mfaSecret isFirstTimeLogin")
 
 
   if (!user) throw new Error("Invalid email");
@@ -44,15 +42,15 @@ export const loginService = async (email, password) => {
   // =========================
   
   if (user.mfaEnabled) {
-    const token = generateTempToken(user._id, user.tenantId, "mfa");
+    const token = generateTempToken(user._id, "mfa");
     
     
+
     await redis.setEx(
       `auth:session:${user._id}`,
       300,
       JSON.stringify({
         userId: user._id,
-        tenantId: user.tenantId,
         email: user.email,
         mfaSecret: user.mfaSecret,
         isFirstTimeLogin: user.isFirstTimeLogin,
@@ -64,7 +62,6 @@ export const loginService = async (email, password) => {
       300,
       JSON.stringify({
         userId: user._id,
-        tenantId: user.tenantId,
         mfaEnabled: user.mfaEnabled,
       })
     );
@@ -88,14 +85,13 @@ export const loginService = async (email, password) => {
       300,
       JSON.stringify({
         userId: user._id,
-        tenantId: user.tenantId,
         email: user.email,
         isFirstTimeLogin: user.isFirstTimeLogin,
         type: user.mfaEnabled ? "mfa" : "email_otp" // 🔥 ADD THIS
       })
     );
 
-    const token = generateTempToken(user._id, user.tenantId, "email_otp");
+    const token = generateTempToken(user._id,  "email_otp");
 
     return {
       emailOtpRequired: true,

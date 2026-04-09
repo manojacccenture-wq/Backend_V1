@@ -11,94 +11,77 @@ export const seedRBAC = async () => {
   const Role = getRoleModel();
   const RolePermission = getRolePermissionModel();
 
-  // clear old
-  await Permission.deleteMany();
-  await Role.deleteMany();
-  await RolePermission.deleteMany();
+  await Promise.all([
+    Permission.deleteMany(),
+    Role.deleteMany(),
+    RolePermission.deleteMany(),
+  ]);
 
   // =========================
-  // PERMISSIONS
+  // 🔐 PERMISSIONS
   // =========================
+
   const permissions = await Permission.insertMany([
     { name: "user:create" },
     { name: "user:view" },
     { name: "user:update" },
     { name: "user:delete" },
-
     { name: "product:create" },
     { name: "product:view" },
-    { name: "product:update" },
-    { name: "product:delete" },
   ]);
 
-
   const permMap = {};
-  permissions.forEach((p) => {
-    permMap[p.name] = p._id;
-  });
+  permissions.forEach((p) => (permMap[p.name] = p._id));
 
   // =========================
-  // ROLES
+  // 👤 ROLES (WITH CODE ✅)
   // =========================
+
   const roles = await Role.insertMany([
-    { name: "SUPER_ADMIN", scope: "platform", isSystem: true },
-
-    { name: "TENANT_ADMIN", scope: "tenant" },
-
-    { name: "PRODUCT_ADMIN", scope: "product" },
-
-    { name: "PRODUCT_USER", scope: "product" },
+    {
+      name: "super_admin",
+      code: "SUPER_ADMIN", // 🔥 important
+      isSystem: true,
+    },
+    {
+      name: "tenant_admin",
+      code: "TENANT_ADMIN",
+    },
+    {
+      name: "product_admin",
+      code: "PRODUCT_ADMIN",
+    },
+    {
+      name: "product_user",
+      code: "PRODUCT_USER",
+    },
   ]);
 
   const roleMap = {};
-  roles.forEach((r) => {
-    roleMap[r.name] = r._id;
-  });
+  roles.forEach((r) => (roleMap[r.code] = r._id)); // 🔥 use code instead of name
 
   // =========================
-  // ROLE PERMISSIONS
+  // 🔗 ROLE PERMISSIONS
   // =========================
-const rolePermissions = [];
 
-// SUPER ADMIN
-permissions.forEach((perm) => {
-  rolePermissions.push({
-    roleId: roleMap["SUPER_ADMIN"],
-    permissionId: perm._id,
-  });
-});
-
-  // TENANT ADMIN
-  rolePermissions.push(
+  await RolePermission.insertMany([
     {
-      roleId: roleMap["TENANT_ADMIN"],
-      permissionId: permMap["user:create"],
+      roleId: roleMap["SUPER_ADMIN"],
+      permissions: permissions.map((p) => p._id),
     },
     {
       roleId: roleMap["TENANT_ADMIN"],
-      permissionId: permMap["user:view"],
-    }
-  );
-
-  // PRODUCT ADMIN
-  rolePermissions.push(
-    {
-      roleId: roleMap["PRODUCT_ADMIN"],
-      permissionId: permMap["product:create"],
+      permissions: [permMap["user:create"], permMap["user:view"]],
     },
     {
       roleId: roleMap["PRODUCT_ADMIN"],
-      permissionId: permMap["product:view"],
-    }
-  );
-
-  // PRODUCT USER
-  rolePermissions.push({
-    roleId: roleMap["PRODUCT_USER"],
-    permissionId: permMap["product:view"],
-  });
-
-  await RolePermission.insertMany(rolePermissions);
+      permissions: [permMap["product:create"], permMap["product:view"]],
+    },
+    {
+      roleId: roleMap["PRODUCT_USER"],
+      permissions: [permMap["product:view"]],
+    },
+  ]);
 
   console.log("✅ RBAC Seeded Successfully");
 };

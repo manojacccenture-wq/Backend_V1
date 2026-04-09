@@ -4,13 +4,15 @@ import { loginService } from "../../services/login.service.js";
 import { generateMFA } from "../../services/enableMfa.service.js";
 import { verifyMFASetupService } from "../../services/verifyMFASetup.service.js";
 import { verifyLoginService } from "../../services/verifyAuth.service.js";
-import { getUserPermissions } from "../../services/permission.service.js";
 import { generateAccessToken, generateRefreshToken, hashToken } from "../../authUtils/token.utils.js";
 import { clearAuthCookie, setAuthCookie, setMfaSetupCookie, setTempAuthCookie } from "../../../../shared/utils/cookies/cookie.util.js";
 
 import { getRedis } from "../../../../config/redis/redis.js";
 import { refreshTokenService } from "../../services/refresh.service.js";
 import { asyncHandler } from "../../../../shared/utils/asyncHandler/asyncHandler.js";
+import { getMembershipModel } from "../../../global/membership/models/membership.model.js";
+import { getRoleModel } from "../../../global/roles/models/roles.models.js";
+import { buildUserContext } from "../../services/buildUserContext.service.js";
 
 export const generateSessionId = () => {
   return crypto.randomBytes(32).toString("hex"); // 64-char secure id
@@ -50,6 +52,9 @@ export const enableMFA = asyncHandler(async (req, res) => {
   });
 });
 
+
+
+
 export const verifyLoginMFA = asyncHandler(async (req, res) => {
   const { token } = req.body;
   const { userId, type } = req.user;
@@ -58,33 +63,27 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
     throw new Error("Invalid token");
   }
 
+  //  STEP 1: verify user
   const user = await verifyLoginService(userId, token, type);
 
+  // STEP 2: build context(optimized)
+  const { contexts, isSuperAdmin } = await buildUserContext(user._id);
 
   const redis = getRedis();
   const sessionId = generateSessionId();
 
-  // const accessToken = generateAccessToken(user);
-  const permissions = await getUserPermissions(user._id);
-
-   const accessToken = generateAccessToken({
-   ...user,
-   permissions,
- });
+  const accessToken = generateAccessToken(user, contexts);
   const refreshToken = generateRefreshToken(user, sessionId);
 
-  // 🔥 SaaS-grade device tracking
-  const sessionData = {
-    token: hashToken(refreshToken),
-    ip: req.ip,
-    userAgent: req.headers["user-agent"],
-    createdAt: Date.now(),
-  };
-
-
+  // session store
   await redis.set(
     `refresh:${user._id}:${sessionId}`,
-    JSON.stringify(sessionData),
+    JSON.stringify({
+      token: hashToken(refreshToken),
+      ip: req.ip,
+      userAgent: req.headers["user-agent"],
+      createdAt: Date.now(),
+    }),
     { EX: 60 * 60 * 24 * 7 }
   );
 
@@ -96,8 +95,10 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
   res.json({
     msg: "Login successful",
     isFirstTimeLogin: user.isFirstTimeLogin,
+    isSuperAdmin,
   });
 });
+
 
 export const verifyMFASetup = asyncHandler(async (req, res) => {
   try {
@@ -163,11 +164,27 @@ export const getUserSessions = asyncHandler(async (req, res) => {
   res.json(sessions);
 });
 
+// export const getMe = asyncHandler(async (req, res) => {
+//   const user = req.user; // from token
+
+//   res.json({
+//     // user,
+//     isAuthenticated: true,
+//   });
+// });
+
+
 export const getMe = asyncHandler(async (req, res) => {
-  const user = req.user; // from token
+  const userId = req.user.userId;
+
+  // 🔥 always rebuild from DB (secure)
+  const { contexts, isSuperAdmin } = await buildUserContext(userId);
 
   res.json({
-    // user,
+    userId,
+    email: req.user.email,
+    contexts,
     isAuthenticated: true,
+    isSuperAdmin,
   });
 });

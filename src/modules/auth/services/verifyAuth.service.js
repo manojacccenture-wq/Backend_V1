@@ -9,6 +9,7 @@ export const verifyLoginService = async (userId, otp, type) => {
 
   const redis = getRedis();
 
+
   const sessionKey = `auth:session:${userId}`;
   const sessionData = await redis.get(sessionKey);
   
@@ -53,7 +54,7 @@ export const verifyLoginService = async (userId, otp, type) => {
   else if (type === "email_otp") {
     const redis = getRedis();
 
-    const key = `auth:otp:${session.tenantId}:${userId}`;
+    const key = `auth:otp:${session.email}:${userId}`;
 
     const storedOtp = await redis.get(key);
 
@@ -85,7 +86,6 @@ export const verifyLoginService = async (userId, otp, type) => {
 
   return {
     _id: session.userId,
-    tenantId: session.tenantId,
     email: session.email,
     isFirstTimeLogin: session.isFirstTimeLogin
   };

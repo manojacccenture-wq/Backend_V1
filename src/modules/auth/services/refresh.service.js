@@ -19,6 +19,7 @@ export const refreshTokenService = async (token) => {
 
   const redis = getRedis();
   const key = `refresh:${userId}:${sessionId}`;
+  
 
 
   const sessionData = await redis.get(key);
@@ -31,7 +32,7 @@ export const refreshTokenService = async (token) => {
 
   // 🔐 Validate token
   if (session.token !== hashToken(token)) {
-    await redis.del(key);
+    // await redis.del(key);
     throw new Error("Token reuse detected");
   }
 
