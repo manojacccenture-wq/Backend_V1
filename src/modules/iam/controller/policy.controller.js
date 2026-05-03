@@ -6,13 +6,14 @@ import { asyncHandler } from "../../../shared/utils/asyncHandler/asyncHandler.js
  */
 
 export const createPolicy = asyncHandler(async (req, res) => {
-  const { name, type, statements, tenantId } = req.body;
+  const { name, type, statements } = req.body;
+  const tenantId = req.context?.tenantId || null; // 🔥 Get from IAM context
   
   const policy = await policyService.createPolicy({
     name,
     type,
     statements,
-    tenantId: tenantId || null
+    tenantId
   });
   
   res.status(201).json({
@@ -50,5 +51,15 @@ export const evaluateTest = asyncHandler(async (req, res) => {
     success: true,
     authorized: isAuthorized,
     context: { action, resource }
+  });
+});
+
+export const getPolicies = asyncHandler(async (req, res) => {
+  const tenantId = req.context?.tenantId || null;
+  const policies = await policyService.getPolicies(tenantId);
+  
+  res.status(200).json({
+    success: true,
+    data: policies
   });
 });

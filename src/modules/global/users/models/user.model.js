@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema({
 
   isFirstTimeLogin: {
     type: Boolean,
-    default: false,
+    default: true,
   },
 
 }

@@ -4,16 +4,21 @@ import { getUserModel } from "../../../modules/global/users/models/user.model.js
 import { getProductModel } from "../../../modules/global/products/models/product.model.js";
 import { getTenantProductModel } from "../../../modules/global/tenantProduct/models/tenantProduct.model.js";
 import { getMembershipModel } from "../../../modules/global/membership/models/membership.model.js";
-import { assignProductToUser } from "../../../modules/global/userProduct/services/userProduct.service.js";
-import { hashPassword } from "../../services/hashPassword/hash.service.js";
-import { seedRBAC } from "./seedRBAC.js";
 import { getRoleModel } from "../../../modules/global/roles/models/roles.models.js";
+import { getPolicyModel } from "../../../modules/iam/models/policy.model.js";
+import { getRolePolicyModel } from "../../../modules/iam/models/rolePolicy.model.js";
+import { hashPassword } from "../../services/hashPassword/hash.service.js";
 
-
+/**
+ * Super Admin & IAM Baseline Seeder
+ * 
+ * This seeder initializes:
+ * 1. Global Super Admin (Platform Owner)
+ * 2. Shared System Roles (SUPER_ADMIN, TENANT_ADMIN, WAITER)
+ * 3. Baseline IAM Policies (Full Access, Waiter Limited)
+ */
 export const seedData = async () => {
-  console.log("🌱 Seeding data...");
-
-  await seedRBAC();
+  console.log("🌱 Starting System Seed...");
 
   const Tenant = getTenantModel();
   const User = getUserModel();
@@ -21,118 +26,99 @@ export const seedData = async () => {
   const TenantProduct = getTenantProductModel();
   const Membership = getMembershipModel();
   const Role = getRoleModel();
+  const Policy = getPolicyModel();
+  const RolePolicy = getRolePolicyModel();
 
+  // 1. CLEANUP PREVIOUS DATA
+  console.log("🗑️ Cleaning up existing data...");
   await Promise.all([
     Tenant.deleteMany(),
     User.deleteMany(),
     Product.deleteMany(),
     TenantProduct.deleteMany(),
     Membership.deleteMany(),
+    Role.deleteMany(),
+    Policy.deleteMany(),
+    RolePolicy.deleteMany(),
   ]);
 
-  // ROLES
-const superAdminRole = await Role.findOne({ code: "SUPER_ADMIN" });
-const tenantAdminRole = await Role.findOne({ code: "TENANT_ADMIN" });
+  // 2. CREATE SYSTEM-WIDE GLOBAL ROLES
+  console.log("🎭 Creating Global System Roles...");
+  const roles = await Role.insertMany([
+    { name: "Super Admin", code: "SUPER_ADMIN", isSystem: true, tenantId: null },
+    { name: "Tenant Admin", code: "TENANT_ADMIN", isSystem: true, tenantId: null },
+    { name: "Owner", code: "OWNER", isSystem: true, tenantId: null },
+    { name: "Waiter", code: "WAITER", isSystem: true, tenantId: null },
+  ]);
 
-  // MFA
-  const mfaSecret = speakeasy.generateSecret({
-    name: "MyApp (shared@user.com)",
+  const roleMap = {};
+  roles.forEach(r => roleMap[r.code] = r._id);
+
+  // 3. CREATE BASELINE IAM POLICIES
+  console.log("🛡️ Creating Baseline IAM Policies...");
+  
+  // A. Global Full Access (for Super Admins)
+  const fullAccessPolicy = await Policy.create({
+    name: "GlobalFullAccess",
+    type: "MANAGED",
+    tenantId: null,
+    statements: [{ effect: "ALLOW", actions: ["*"], resources: ["*"] }]
   });
 
-  // TENANTS
-  const sharedTenant = await Tenant.create({
-    name: "Startup",
-    dataMode: "shared",
+  // B. Standard Waiter Policy (Limited Access)
+  const waiterPolicy = await Policy.create({
+    name: "WaiterBasePolicy",
+    type: "MANAGED",
+    tenantId: null,
+    statements: [
+      { 
+        effect: "ALLOW", 
+        actions: ["orders:view", "orders:create", "tables:view"], 
+        resources: ["*"] 
+      },
+      {
+        effect: "DENY",
+        actions: ["orders:delete", "reports:view"],
+        resources: ["*"]
+      }
+    ]
   });
 
-  const enterpriseTenant = await Tenant.create({
-    name: "Enterprise",
-    dataMode: "isolated",
-    dbName: "tenant_enterprise_db",
-  });
+  // 4. ATTACH BASELINE POLICIES TO ROLES
+  console.log("🔗 Linking Policies to Roles...");
+  await RolePolicy.insertMany([
+    { roleId: roleMap["SUPER_ADMIN"], policyId: fullAccessPolicy._id },
+    { roleId: roleMap["WAITER"], policyId: waiterPolicy._id }
+  ]);
 
+  // 5. CREATE GLOBAL SUPER ADMIN USER
+  console.log("👤 Creating Global Super Admin Account...");
   const password = await hashPassword("123456");
+  
+  // Generate MFA secret for secure login
+  const mfaSecret = speakeasy.generateSecret({ name: "MSaas (manojacccenture@gmail.com)" });
 
-  // USERS
-  const superAdminUser = await User.create({
+  const superAdmin = await User.create({
     email: "manojacccenture@gmail.com",
     password,
     mfaEnabled: true,
     mfaSecret: mfaSecret.base32,
+    isFirstTimeLogin: false
   });
 
-  const enterpriseUser = await User.create({
-    email: "enterprise@user.com",
-    password,
-  });
-
-  // =========================
-  // 🌍 GLOBAL PRODUCTS
-  // =========================
-
-  const crm = await Product.create({
-    name: "CRM",
-    code: "crm",
-  });
-
-  const billing = await Product.create({
-    name: "Billing",
-    code: "billing",
-  });
-
-  // =========================
-  // 🏢 TENANT PRODUCT MAPPING
-  // =========================
-
-  // Startup → CRM
-  await TenantProduct.create({
-    tenantId: sharedTenant._id,
-    productId: crm._id,
-  });
-
-  // Enterprise → CRM + Billing
-  await TenantProduct.create({
-    tenantId: enterpriseTenant._id,
-    productId: crm._id,
-  });
-
-  await TenantProduct.create({
-    tenantId: enterpriseTenant._id,
-    productId: billing._id,
-  });
-
-  // =========================
-  // 👤 USER PRODUCT ACCESS
-  // =========================
-
-  await assignProductToUser({
-    userId: enterpriseUser._id,
-    tenantId: enterpriseTenant._id,
-    productId: crm._id,
-  });
-
-  await assignProductToUser({
-    userId: enterpriseUser._id,
-    tenantId: enterpriseTenant._id,
-    productId: billing._id,
-  });
-
-  // =========================
-  // 🔐 MEMBERSHIP (RBAC)
-  // =========================
-
-  // SUPER ADMIN
+  // 6. ASSIGN GLOBAL MEMBERSHIP
+  // This user has no tenantId, giving them Platform-wide access
   await Membership.create({
-    userId: superAdminUser._id,
-    roleId: superAdminRole._id,
+    userId: superAdmin._id,
+    roleId: roleMap["SUPER_ADMIN"],
+    tenantId: null, 
+    isActive: true
   });
 
-  // TENANT ADMIN
-  await Membership.create({
-    userId: enterpriseUser._id,
-    roleId: tenantAdminRole._id,
-    tenantId: enterpriseTenant._id,
-  });
-
-  console.log("✅ Seed completed");
+  console.log("✅ Seed Complete!");
+  console.log("-----------------------------------------");
+  console.log("Super Admin: manojacccenture@gmail.com");
+  console.log("Password:    123456");
+  console.log("Status:      MFA Enabled (Use an app or check console/DB)");
+  console.log("-----------------------------------------");
 };

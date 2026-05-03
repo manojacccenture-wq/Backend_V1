@@ -12,6 +12,9 @@ const router = Router();
 // Create a new policy (Managed or Inline)
 router.post("/policies", accessAuthMiddleware, policyController.createPolicy);
 
+// Get all policies
+router.get("/policies", accessAuthMiddleware, policyController.getPolicies);
+
 // Attach a policy to a Role
 router.post("/policies/attach", accessAuthMiddleware, policyController.attachPolicyToRole);
 

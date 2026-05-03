@@ -11,13 +11,11 @@ export const generateTempToken = (userId, type) => {
 };
 
 
-export const generateAccessToken = (user, contexts, permissions) => {
+export const generateAccessToken = (user) => {
   return jwt.sign(
     {
       userId: user._id,
       email: user.email,
-      contexts,        // 🔥 NEW
-      permissions,     // optional cache
       type: "access",
     },
     process.env.JWT_SECRET,

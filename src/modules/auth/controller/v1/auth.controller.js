@@ -12,7 +12,7 @@ import { refreshTokenService } from "../../services/refresh.service.js";
 import { asyncHandler } from "../../../../shared/utils/asyncHandler/asyncHandler.js";
 import { getMembershipModel } from "../../../global/membership/models/membership.model.js";
 import { getRoleModel } from "../../../global/roles/models/roles.models.js";
-import { buildUserContext } from "../../services/buildUserContext.service.js";
+import { buildUserContext, getUserMemberships } from "../../services/buildUserContext.service.js";
 
 export const generateSessionId = () => {
   return crypto.randomBytes(32).toString("hex"); // 64-char secure id
@@ -66,13 +66,13 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
   //  STEP 1: verify user
   const user = await verifyLoginService(userId, token, type);
 
-  // STEP 2: build context(optimized)
-  const { contexts, isSuperAdmin } = await buildUserContext(user._id);
+  // STEP 2: build initial context (Global or Default)
+  const context = await buildUserContext(user._id);
 
   const redis = getRedis();
   const sessionId = generateSessionId();
 
-  const accessToken = generateAccessToken(user, contexts);
+  const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user, sessionId);
 
   // session store
@@ -95,7 +95,7 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
   res.json({
     msg: "Login successful",
     isFirstTimeLogin: user.isFirstTimeLogin,
-    isSuperAdmin,
+    isSuperAdmin: context?.isSuperAdmin || false,
   });
 });
 
@@ -176,15 +176,23 @@ export const getUserSessions = asyncHandler(async (req, res) => {
 
 export const getMe = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
+  const tenantId = req.headers["x-tenant-id"] || null;
 
-  // 🔥 always rebuild from DB (secure)
-  const { contexts, isSuperAdmin } = await buildUserContext(userId);
+  // 🔥 Fetch only the active tenant context (Ultra-fast)
+  const context = await buildUserContext(userId, tenantId);
+  
+  // 🏢 Fetch all memberships for the frontend switcher
+  const memberships = await getUserMemberships(userId);
 
   res.json({
     userId,
     email: req.user.email,
-    contexts,
+    activeContext: context,
+    tenants: memberships.map(m => ({
+      tenantId: m.tenantId,
+      productId: m.productId,
+      role: m.roleId.code
+    })),
     isAuthenticated: true,
-    isSuperAdmin,
   });
 });

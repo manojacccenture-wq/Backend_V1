@@ -104,3 +104,55 @@ export const getUserRoleIds = async (userId, tenantId = null) => {
   const memberships = await Membership.find(query).lean();
   return memberships.map(m => m.roleId);
 };
+
+/**
+ * Compiles all ALLOWED actions for the given roleIds, subtracting any DENIED actions.
+ * Used for legacy req.user.permissions support.
+ */
+export const getCompiledPermissions = async (roleIds) => {
+  if (!roleIds || roleIds.length === 0) return [];
+
+  const Policy = getPolicyModel();
+  const RolePolicy = getRolePolicyModel();
+
+  const rolePolicies = await RolePolicy.find({
+    roleId: { $in: roleIds.map(id => new mongoose.Types.ObjectId(id)) }
+  }).lean();
+
+  const policyIds = rolePolicies.map(rp => rp.policyId);
+  if (policyIds.length === 0) return [];
+
+  const policies = await Policy.find({ _id: { $in: policyIds } }).lean();
+
+  let allowActions = new Set();
+  let denyActions = new Set();
+
+  for (const policy of policies) {
+    for (const statement of policy.statements) {
+      if (statement.effect === "ALLOW") {
+        statement.actions.forEach(a => allowActions.add(a));
+      } else {
+        statement.actions.forEach(a => denyActions.add(a));
+      }
+    }
+  }
+
+  // Simple filter for exact matches. 
+  // In a real IAM system, DENY would be checked per request via evaluateAccess.
+  return Array.from(allowActions).filter(action => !denyActions.has(action));
+};
+
+/**
+ * Get all available policies (Tenant Aware)
+ */
+export const getPolicies = async (tenantId = null) => {
+  const Policy = getPolicyModel();
+  
+  // Show Global Managed policies + Tenant specific policies
+  return await Policy.find({
+    $or: [
+      { tenantId: null },
+      { tenantId: tenantId }
+    ]
+  }).lean();
+};

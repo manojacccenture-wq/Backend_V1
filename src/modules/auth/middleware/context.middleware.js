@@ -1,48 +1,49 @@
-import { getMembershipModel } from "../../global/membership/models/membership.model";
+import { buildUserContext } from "../services/buildUserContext.service.js";
 
-
+/**
+ * Bridge Context Middleware
+ * 
+ * Optimized to use tenant-aware caching via buildUserContext.
+ */
 export const contextMiddleware = async (req, res, next) => {
   try {
     const userId = req.user.userId;
-    const tenantId = req.headers["x-tenant-id"];
+    const tenantId = req.headers["x-tenant-id"] || null;
 
-    const Membership = getMembershipModel();
+    // 🔥 Use the high-performance, cached context builder
+    const context = await buildUserContext(userId, tenantId);
 
-    const memberships = await Membership.find({
-      userId,
-      isActive: true,
-    }).populate("roleId");
-
-    // 🔥 SUPER ADMIN CHECK
-    const superAdmin = memberships.find(
-      (m) => !m.tenantId
-    );
-
-    if (superAdmin) {
-      req.context = {
-        role: superAdmin.roleId.name,
-        isSuperAdmin: true,
-      };
-      return next();
+    if (!context && tenantId) {
+      return res.status(403).json({ 
+        success: false,
+        message: "Access Denied: No active membership found for this tenant" 
+      });
     }
 
-    // 🔥 TENANT ROLE
-    const tenantMembership = memberships.find(
-      (m) => m.tenantId?.toString() === tenantId
-    );
-
-    if (!tenantMembership) {
-      return res.status(403).json({ msg: "No access to tenant" });
+    if (!context) {
+       // Allow empty context if no tenant provided (e.g., public or global check)
+       req.context = { isSuperAdmin: false };
+       return next();
     }
 
+    // 5. 🔥 SINGLE SOURCE OF TRUTH: IAM ONLY
+    // We populate req.user.permissions for backward compatibility
+    req.user.permissions = context.permissions;
+
+    // 6. Set up Request Context for both systems
     req.context = {
-      role: tenantMembership.roleId.name,
-      tenantId,
-      isSuperAdmin: false,
+      role: context.role,
+      roleIds: context.roleIds || [], // Ensure we have IDs if needed
+      tenantId: context.tenantId,
+      isSuperAdmin: context.isSuperAdmin,
     };
 
     next();
   } catch (err) {
-    res.status(500).json({ msg: "Context error" });
+    console.error("IAM Bridge Middleware Error:", err);
+    res.status(500).json({ 
+      success: false,
+      message: "Security Context Initialization Failed" 
+    });
   }
 };

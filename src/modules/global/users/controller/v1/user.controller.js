@@ -1,16 +1,22 @@
 import * as userService from "../../services/user.service.js";
 
 export const createUser = async (req, res) => {
-  const { email, password, roleId } = req.body;
+  const { email, password, role } = req.body; // 'role' contains the Role ID from the frontend
+  const tenantId = req.context?.tenantId;
 
-  const user = await userService.createTenantUser({
+  // 🔥 Call with individual arguments as defined in service
+  const user = await userService.createTenantUser(
     email,
     password,
-    tenantId: req.tenantId,
-    roleId,
-  });
+    tenantId,
+    role
+  );
 
-  res.json(user);
+  res.json({
+    success: true,
+    message: "User created and linked to tenant successfully",
+    data: user
+  });
 };
 
 export const getUsers = async (req, res) => {
