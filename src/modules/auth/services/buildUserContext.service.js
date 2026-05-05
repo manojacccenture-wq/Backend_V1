@@ -30,8 +30,12 @@ export const buildUserContext = async (userId, tenantId = null) => {
       $match: {
         userId: userObjectId,
         isActive: true,
-        ...(tenantObjectId ? { tenantId: tenantObjectId } : { tenantId: null }),
+        ...(tenantObjectId ? { tenantId: tenantObjectId } : {}), // Fallback to any active membership if none specified
       },
+    },
+    {
+      // Prioritize Global Admin (tenantId: null) first, otherwise take the first available tenant
+      $sort: { tenantId: 1 }
     },
     // 🔗 Populate role
     {
@@ -100,6 +104,7 @@ export const buildUserContext = async (userId, tenantId = null) => {
     }
   ]);
 
+
   const membership = result[0] || null;
 
   // 🚀 PERFORMANCE FIX: Actually save to Redis so the next call is ultra-fast
@@ -107,6 +112,7 @@ export const buildUserContext = async (userId, tenantId = null) => {
     // Caches for 1 hour (3600 seconds) - adjust time as needed
     await redis.set(cacheKey, JSON.stringify(membership), "EX", 3600);
   }
+
 
   return membership; // 🐛 BUG FIX: You were missing this return statement!
 };
