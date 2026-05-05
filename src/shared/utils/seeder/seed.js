@@ -261,7 +261,16 @@ export const seedData = async () => {
     { roleId: roleMap["VIEWER"],        policyId: viewerPolicy._id },
   ]);
 
-  // ── 5. SUPER ADMIN USER ────────────────────────────────────────────────────
+  // ── 5. SEED PRODUCTS ───────────────────────────────────────────────────────
+  console.log("🛒 Creating Products...");
+  const kitchenApp = await Product.create({
+    name: "Anas Kitchen",
+    code: "ANAS_KITCHEN",
+    description: "Core restaurant management application",
+    isActive: true,
+  });
+
+  // ── 6. SUPER ADMIN USER ────────────────────────────────────────────────────
   console.log("👤 Creating Global Super Admin Account...");
 
   const password  = await hashPassword("123456");

@@ -10,8 +10,11 @@ export const verifyLoginService = async (userId, otp, type) => {
   const redis = getRedis();
 
 
+  console.log('` In VerifyAuth Serviec auth:session:${userId}`: ', `auth:session:${userId}`)
   const sessionKey = `auth:session:${userId}`;
   const sessionData = await redis.get(sessionKey);
+  console.log('sessionData: ', sessionData)
+  
   
   
 
@@ -82,7 +85,11 @@ export const verifyLoginService = async (userId, otp, type) => {
     throw new Error("Invalid token type");
   }
 
+  // ✅ CLEANUP: Destroy BOTH session keys after successful login
   await redis.del(`auth:session:${userId}`);
+  
+  // 🔥 ADD THIS LINE: This ensures the "ghost" session is wiped out!
+  await redis.del(`auth:email:${session.email}`);
 
   return {
     _id: session.userId,

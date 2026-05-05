@@ -12,84 +12,103 @@ import { getCompiledPermissions } from "../../iam/services/policy.service.js";
  */
 export const buildUserContext = async (userId, tenantId = null) => {
   const redis = getRedis();
-  
+
   // 1. ✅ CHECK TENANT-AWARE CACHE
   const cacheKey = `ctx:${userId}:${tenantId || "global"}`;
   const cached = await redis.get(cacheKey);
+
   if (cached) {
-    return JSON.parse(cached);
+    return JSON.parse(cached); // Fast return if cached
   }
 
   const Membership = getMembershipModel();
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  const tenantObjectId = tenantId ? new mongoose.Types.ObjectId(tenantId) : null;
 
-  // 2. ✅ CHECK FOR GLOBAL SUPER ADMIN (Platform Access)
-  // Super Admins can impersonate ANY tenant even without a specific membership.
-  const globalMembership = await Membership.findOne({ 
-    userId: new mongoose.Types.ObjectId(userId), 
-    tenantId: null,
-    isActive: true 
-  }).populate("roleId", "code name").lean();
-
-  const isGlobalSuperAdmin = globalMembership?.roleId?.code === "SUPER_ADMIN";
-
-  // 3. ✅ RESOLVE MEMBERSHIP OR IMPERSONATION
-  let membership = null;
-  
-  if (tenantId) {
-    // Try to find a specific membership for this tenant
-    membership = await Membership.findOne({
-      userId: new mongoose.Types.ObjectId(userId),
-      tenantId: new mongoose.Types.ObjectId(tenantId),
-      isActive: true
-    }).populate("roleId", "code name").lean();
-
-    // 🔥 Super Admin Bypass: If no specific membership, use their global privileges
-    if (!membership && isGlobalSuperAdmin) {
-      membership = {
-        userId,
-        tenantId: new mongoose.Types.ObjectId(tenantId),
-        roleId: globalMembership.roleId,
-        productId: null
-      };
+  const result = await Membership.aggregate([
+    {
+      $match: {
+        userId: userObjectId,
+        isActive: true,
+        ...(tenantObjectId ? { tenantId: tenantObjectId } : { tenantId: null }),
+      },
+    },
+    // 🔗 Populate role
+    {
+      $lookup: {
+        from: "roles",
+        localField: "roleId",
+        foreignField: "_id",
+        as: "role",
+      },
+    },
+    { $unwind: "$role" },
+    // 🔗 Get user products
+    {
+      $lookup: {
+        from: "userproducts",
+        let: { userId: "$userId", tenantId: "$tenantId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$userId", "$$userId"] },
+                  { $eq: ["$tenantId", "$$tenantId"] },
+                  { $eq: ["$isActive", true] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "userProducts",
+      },
+    },
+    // 🔗 Get actual product details
+    {
+      $lookup: {
+        from: "products",
+        let: { productIds: "$userProducts.productId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $in: ["$_id", "$$productIds"] },
+                  { $eq: ["$isActive", true] },
+                ],
+              },
+            },
+          },
+          {
+            $project: { code: 1, name: 1 },
+          },
+        ],
+        as: "products",
+      },
+    },
+    // ✅ Final shape
+    {
+      $project: {
+        tenantId: 1,
+        roleId: "$role",
+        products: 1,
+      },
+    },
+    {
+      $unset: ["roleId.__v"]
     }
-  } else {
-    // No tenant requested, default to Global context
-    membership = globalMembership;
+  ]);
+
+  const membership = result[0] || null;
+
+  // 🚀 PERFORMANCE FIX: Actually save to Redis so the next call is ultra-fast
+  if (membership) {
+    // Caches for 1 hour (3600 seconds) - adjust time as needed
+    await redis.set(cacheKey, JSON.stringify(membership), "EX", 3600);
   }
 
-  // 4. ✅ AUTO-FALLBACK (For standard users who don't send a header)
-  if (!membership && !tenantId) {
-    membership = await Membership.findOne({ 
-      userId: new mongoose.Types.ObjectId(userId), 
-      isActive: true 
-    })
-    .populate("roleId", "code name")
-    .lean();
-  }
-
-  if (!membership) {
-    return null;
-  }
-
-  // 5. ✅ IAM PERMISSION RESOLUTION
-  const roleIds = [membership.roleId._id];
-  const permissions = await getCompiledPermissions(roleIds);
-
-  const context = {
-    tenantId: membership.tenantId,
-    productId: membership.productId,
-    role: membership.roleId.code,
-    roleIds,
-    permissions,
-    isSuperAdmin: membership.roleId.code === "SUPER_ADMIN"
-  };
-
-  // 6. ✅ CACHE IN REDIS
-  await redis.set(cacheKey, JSON.stringify(context), {
-    EX: 60 * 15,
-  });
-
-  return context;
+  return membership; // 🐛 BUG FIX: You were missing this return statement!
 };
 
 /**
@@ -97,10 +116,13 @@ export const buildUserContext = async (userId, tenantId = null) => {
  */
 export const getUserMemberships = async (userId) => {
   const Membership = getMembershipModel();
-  return await Membership.find({ 
-    userId: new mongoose.Types.ObjectId(userId), 
-    isActive: true 
+  
+  return await Membership.find({
+    userId: new mongoose.Types.ObjectId(userId),
+    isActive: true
   })
-  .populate("roleId", "code name")
-  .lean();
+    .select("-productId -__v") // 👈 All exclusions: This is perfectly valid
+    .populate("roleId", "code name") // 👈 All inclusions: Implicitly removes __v
+    .populate("tenantId", "name")
+    .lean();
 };

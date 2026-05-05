@@ -13,7 +13,9 @@ export const loginService = async (email, password) => {
   //  check if session already exists
   const existingSessionKey = `auth:email:${email}`;
   const existingSession = await redis.get(existingSessionKey);
-  
+  console.log('existingSession: ', existingSession)
+
+
 
 
 
@@ -23,7 +25,7 @@ export const loginService = async (email, password) => {
     return {
       emailOtpRequired: !session.mfaEnabled,
       mfaRequired: session.mfaEnabled,
-      token: generateTempToken(session.userId,  session.mfaEnabled ? "mfa" : "email_otp"),
+      token: generateTempToken(session.userId, session.mfaEnabled ? "mfa" : "email_otp"),
     };
   }
 
@@ -40,11 +42,9 @@ export const loginService = async (email, password) => {
   // =========================
   // MFA FLOW
   // =========================
-  
+
   if (user.mfaEnabled) {
     const token = generateTempToken(user._id, "mfa");
-    
-    
 
     await redis.setEx(
       `auth:session:${user._id}`,
@@ -57,6 +57,9 @@ export const loginService = async (email, password) => {
         type: user.mfaEnabled ? "mfa" : "email_otp" // 🔥 ADD THIS
       })
     );
+
+    console.log('`auth:session:${user._id}`: Checks ', `auth:session:${user._id}`)
+
     await redis.setEx(
       `auth:email:${user.email}`,
       300,
@@ -91,7 +94,7 @@ export const loginService = async (email, password) => {
       })
     );
 
-    const token = generateTempToken(user._id,  "email_otp");
+    const token = generateTempToken(user._id, "email_otp");
 
     return {
       emailOtpRequired: true,

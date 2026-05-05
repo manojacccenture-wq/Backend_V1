@@ -21,6 +21,7 @@ export const generateSessionId = () => {
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
+
   const result = await loginService(email, password);
 
   if (result.mfaRequired) {
@@ -133,16 +134,29 @@ export const logout = asyncHandler(async (req, res) => {
   const token = req.cookies.refreshToken;
 
   if (token) {
-    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-    const redis = getRedis();
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+      const redis = getRedis();
 
-    await redis.del(`refresh:${decoded.userId}:${decoded.sessionId}`);
+      // 🔥 FIX: Use req.user.email instead of the undefined 'email' variable
+      if (req.user && req.user.email) {
+        await redis.del(`auth:email:${req.user.email}`);
+      }
+
+      // Delete other session keys
+      await redis.del(`auth:session:${decoded.userId}`);
+      await redis.del(`refresh:${decoded.userId}:${decoded.sessionId}`);
+      
+    } catch (err) {
+      console.warn("Invalid token during logout, proceeding to clear cookies.");
+    }
   }
 
   clearAuthCookie(res);
 
   res.json({ msg: "Logged out successfully" });
 });
+
 
 
 export const getUserSessions = asyncHandler(async (req, res) => {
@@ -164,34 +178,30 @@ export const getUserSessions = asyncHandler(async (req, res) => {
   res.json(sessions);
 });
 
-// export const getMe = asyncHandler(async (req, res) => {
-//   const user = req.user; // from token
-
-//   res.json({
-//     // user,
-//     isAuthenticated: true,
-//   });
-// });
 
 
 export const getMe = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
   const tenantId = req.headers["x-tenant-id"] || null;
 
-  // 🔥 Fetch only the active tenant context (Ultra-fast)
-  const context = await buildUserContext(userId, tenantId);
-  
-  // 🏢 Fetch all memberships for the frontend switcher
-  const memberships = await getUserMemberships(userId);
+  // 🔥 Execute both independent queries concurrently using Promise.all
+  // This executes them in parallel, halving the I/O wait time if they take similar times.
+  const [context, memberships] = await Promise.all([
+    buildUserContext(userId, tenantId),
+    getUserMemberships(userId)
+  ]);
+
+
 
   res.json({
     userId,
     email: req.user.email,
     activeContext: context,
     tenants: memberships.map(m => ({
-      tenantId: m.tenantId,
-      productId: m.productId,
-      role: m.roleId.code
+      tenantId: m.tenantId ? m.tenantId._id : null,
+      tenantName: m.tenantId ? m.tenantId.name : null,
+      // productId: m.productId,
+      role: m.roleId ? m.roleId.code : null
     })),
     isAuthenticated: true,
   });

@@ -18,4 +18,8 @@ export const createTenantSchema = z.object({
     .regex(/[A-Z]/, "Must include uppercase")
     .regex(/[a-z]/, "Must include lowercase")
     .regex(/[0-9]/, "Must include number"),
+
+  products: z
+    .array(z.string())
+    .min(1, "At least one product must be assigned to the tenant"),
 });

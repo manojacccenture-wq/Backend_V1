@@ -1,9 +1,11 @@
-
 import { createTenant, createTenantDatabase } from "./tenant.service.js";
 import { createMembership } from "../../membership/services/createmembership.service.js";
 import { getGlobalDB } from "../../../../config/db/db.js";
 import { getMembershipModel } from "../../membership/models/membership.model.js";
 import { getRoleModel } from "../../roles/models/roles.models.js";
+import { getProductModel } from "../../products/models/product.model.js";
+import { getTenantProductModel } from "../../tenantProduct/models/tenantProduct.model.js";
+import { getUserProductModel } from "../../userProduct/models/userProduct.model.js";
 import { getRedis } from "../../../../config/redis/redis.js";
 import { createUserIfNotExists } from "../../users/services/user.service.js";
 
@@ -33,6 +35,7 @@ export const createTenantWithAdmin = async ({
   dataMode,
   email,
   password,
+  products,
 }) => {
 
   const redis = getRedis();
@@ -53,21 +56,17 @@ export const createTenantWithAdmin = async ({
   const db = getGlobalDB();
   const session = await db.startSession();
 
-
-
-
-
-
   try {
     session.startTransaction();
     const Membership = getMembershipModel();
+    const Product = getProductModel();
+    const TenantProduct = getTenantProductModel();
+    const UserProduct = getUserProductModel();
+
     //  1. Get OWNER role (cached)
     const ownerRoleId = await getOwnerRoleId();
 
-
-
-
-    // 🔹 1. USER
+    // 🔹 2. USER
     const user = await createUserIfNotExists(email, password, session);
 
     // ⚡ 3. Redis fast check
@@ -79,7 +78,7 @@ export const createTenantWithAdmin = async ({
     }
 
 
-    //  2. OWNER CHECK
+    //  4. OWNER CHECK
     const existingOwner = await Membership.findOne({
       userId: user._id,
       roleId: ownerRoleId, // ensure this is OWNER role
@@ -89,16 +88,40 @@ export const createTenantWithAdmin = async ({
       throw new Error("User already owns a tenant");
     }
 
-    // 🔹 3. TENANT
+    // 🔹 5. TENANT
     const tenant = await createTenant({ name, dataMode }, session);
 
-    // 🔹 4. MEMBERSHIP
+    // 🔹 6. Validate & Assign Products
+    const existingProducts = await Product.find({ code: { $in: products } }).session(session);
+    if (existingProducts.length !== products.length) {
+      throw new Error("One or more invalid product codes provided");
+    }
+
+    // Create TenantProducts and UserProducts
+    const tenantProductsToInsert = [];
+    const userProductsToInsert = [];
+
+    existingProducts.forEach((prod) => {
+      tenantProductsToInsert.push({
+        tenantId: tenant._id,
+        productId: prod._id,
+        isEnabled: true,
+      });
+
+      userProductsToInsert.push({
+        userId: user._id,
+        tenantId: tenant._id,
+        productId: prod._id,
+        isActive: true,
+      });
+    });
+
+    await TenantProduct.insertMany(tenantProductsToInsert, { session });
+    await UserProduct.insertMany(userProductsToInsert, { session });
+
+    // 🔹 7. MEMBERSHIP
+    // NOTE: Owner role is global for the tenant, so productId is null
     await createMembership(user._id, tenant._id, ownerRoleId, session);
-
-
-
-
-
 
     await session.commitTransaction();
     session.endSession();
