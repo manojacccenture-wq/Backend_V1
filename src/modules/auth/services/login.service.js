@@ -13,7 +13,7 @@ export const loginService = async (email, password) => {
   //  check if session already exists
   const existingSessionKey = `auth:email:${email}`;
   const existingSession = await redis.get(existingSessionKey);
-  console.log('existingSession: ', existingSession)
+  
 
 
 
@@ -58,7 +58,7 @@ export const loginService = async (email, password) => {
       })
     );
 
-    console.log('`auth:session:${user._id}`: Checks ', `auth:session:${user._id}`)
+    
 
     await redis.setEx(
       `auth:email:${user.email}`,

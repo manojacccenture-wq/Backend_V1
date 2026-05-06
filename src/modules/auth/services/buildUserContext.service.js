@@ -17,6 +17,7 @@ export const buildUserContext = async (userId, tenantId = null) => {
   const cacheKey = `ctx:${userId}:${tenantId || "global"}`;
   const cached = await redis.get(cacheKey);
 
+
   if (cached) {
     return JSON.parse(cached); // Fast return if cached
   }
@@ -107,14 +108,19 @@ export const buildUserContext = async (userId, tenantId = null) => {
 
   const membership = result[0] || null;
 
-  // 🚀 PERFORMANCE FIX: Actually save to Redis so the next call is ultra-fast
   if (membership) {
-    // Caches for 1 hour (3600 seconds) - adjust time as needed
+    const roleId = membership.roleId?._id;
+    const permissions = roleId ? await getCompiledPermissions([roleId]) : [];
+    const isSuperAdmin = !membership.tenantId;
+
+    membership.permissions = permissions;
+    membership.isSuperAdmin = isSuperAdmin;
+
+    // Caches for 1 hour (3600 seconds) — includes permissions
     await redis.set(cacheKey, JSON.stringify(membership), "EX", 3600);
   }
 
-
-  return membership; // 🐛 BUG FIX: You were missing this return statement!
+  return membership;
 };
 
 /**
@@ -122,13 +128,14 @@ export const buildUserContext = async (userId, tenantId = null) => {
  */
 export const getUserMemberships = async (userId) => {
   const Membership = getMembershipModel();
-  
+
   return await Membership.find({
     userId: new mongoose.Types.ObjectId(userId),
     isActive: true
   })
-    .select("-productId -__v") // 👈 All exclusions: This is perfectly valid
-    .populate("roleId", "code name") // 👈 All inclusions: Implicitly removes __v
+    .select("-__v")
+    .populate("roleId", "code name")
     .populate("tenantId", "name")
+    .populate("productId", "name code")
     .lean();
 };

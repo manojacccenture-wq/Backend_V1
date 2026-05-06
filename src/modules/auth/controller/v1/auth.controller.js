@@ -13,6 +13,7 @@ import { asyncHandler } from "../../../../shared/utils/asyncHandler/asyncHandler
 import { getMembershipModel } from "../../../global/membership/models/membership.model.js";
 import { getRoleModel } from "../../../global/roles/models/roles.models.js";
 import { buildUserContext, getUserMemberships } from "../../services/buildUserContext.service.js";
+import { buildUserMenu } from "../../services/buildUserMenu.service.js";
 
 export const generateSessionId = () => {
   return crypto.randomBytes(32).toString("hex"); // 64-char secure id
@@ -197,12 +198,44 @@ export const getMe = asyncHandler(async (req, res) => {
     userId,
     email: req.user.email,
     activeContext: context,
-    tenants: memberships.map(m => ({
+    memberships: memberships.map(m => ({
+      membershipId: m._id,
       tenantId: m.tenantId ? m.tenantId._id : null,
       tenantName: m.tenantId ? m.tenantId.name : null,
-      // productId: m.productId,
-      role: m.roleId ? m.roleId.code : null
+      role: m.roleId ? m.roleId.code : null,
+      roleName: m.roleId ? m.roleId.name : null,
+      productId: m.productId ? m.productId._id : null,
+      productCode: m.productId ? m.productId.code : null,
+      productName: m.productId ? m.productId.name : null,
     })),
     isAuthenticated: true,
+  });
+});
+
+export const getSidebarMenu = asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+  const tenantId = req.headers["x-tenant-id"] || null;
+
+  const context = await buildUserContext(userId, tenantId);
+
+  if (!context) {
+    return res.status(403).json({ msg: "No active context found" });
+  }
+
+  const activeProductCode = req.headers["x-product-id"] || null;
+  console.log('activeProductCode: ', activeProductCode)
+  
+  // Dynamically compute the menu for this specific product + role combo
+  const permissions = context.permissions || [];
+  const products = context.products || [];
+  const isSuperAdmin = context.isSuperAdmin || false;
+  console.log('permissions: ', permissions)
+  console.log('products: ', products)
+  console.log('isSuperAdmin: ', isSuperAdmin)
+
+  const menu = buildUserMenu(permissions, products, isSuperAdmin, activeProductCode);
+
+  res.json({
+    menu
   });
 });

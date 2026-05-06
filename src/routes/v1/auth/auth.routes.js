@@ -1,5 +1,5 @@
 import express from "express";
-import { login ,verifyMFASetup,enableMFA,verifyLoginMFA,refreshToken,logout, getMe} from "../../../modules/auth/controller/v1/auth.controller.js";
+import { login ,verifyMFASetup,enableMFA,verifyLoginMFA,refreshToken,logout, getMe, getSidebarMenu} from "../../../modules/auth/controller/v1/auth.controller.js";
 import { tempAuthMiddleware } from "../../../modules/auth/middleware/temp.middleware.js";
 import { accessAuthMiddleware } from "../../../modules/auth/middleware/access.middleware.js";
 import { mfaSetupMiddleware } from "../../../modules/auth/middleware/mfaSetup.middleware.js";
@@ -27,5 +27,8 @@ router.post("/logout", accessAuthMiddleware, logout);
 
 // To check user is authenticated or not and to get user details
 router.get("/me", accessAuthMiddleware, getMe);
+
+// To get the sidebar menu config based on the user's active context
+router.get("/menu", accessAuthMiddleware, getSidebarMenu);
 
 export default router;

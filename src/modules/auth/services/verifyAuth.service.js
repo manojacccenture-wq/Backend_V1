@@ -10,10 +10,10 @@ export const verifyLoginService = async (userId, otp, type) => {
   const redis = getRedis();
 
 
-  console.log('` In VerifyAuth Serviec auth:session:${userId}`: ', `auth:session:${userId}`)
+  
   const sessionKey = `auth:session:${userId}`;
   const sessionData = await redis.get(sessionKey);
-  console.log('sessionData: ', sessionData)
+  
   
   
   
