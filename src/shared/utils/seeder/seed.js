@@ -8,6 +8,10 @@ import { getRoleModel, CATEGORY_LEVEL_MAP } from "../../../modules/global/roles/
 import { getPolicyModel } from "../../../modules/iam/models/policy.model.js";
 import { getRolePolicyModel } from "../../../modules/iam/models/rolePolicy.model.js";
 import { hashPassword } from "../../services/hashPassword/hash.service.js";
+import { getPlanModel } from "../../../modules/global/plans/models/plans.model.js";
+import { getTenantSubscriptionModel } from "../../../modules/global/plans/models/tenantSubscription.model.js";
+import { ensureDefaultTrialPlan } from "../../../modules/global/plans/services/plan.service.js";
+import { initializeTenantBilling } from "../../../modules/global/plans/services/subscription.service.js";
 
 /**
  * Super Admin & IAM Baseline Seeder
@@ -49,6 +53,8 @@ export const seedData = async () => {
     Role.deleteMany(),
     Policy.deleteMany(),
     RolePolicy.deleteMany(),
+    getPlanModel().deleteMany(),
+    getTenantSubscriptionModel().deleteMany(),
   ]);
 
   // ── 2. GLOBAL SYSTEM ROLES (with level + category) ────────────────────────
@@ -291,6 +297,69 @@ export const seedData = async () => {
     tenantId: null,
     isActive: true,
   });
+
+  // ── DONE (base) ────────────────────────────────────────────────────────────
+
+  // ── 7. SEED SUBSCRIPTION PLANS ─────────────────────────────────────────────
+  console.log("💳 Seeding Subscription Plans...");
+
+  // Ensure the default STARTER_TRIAL plan exists (idempotent)
+  const starterTrial = await ensureDefaultTrialPlan();
+
+  // Seed additional named plans for development visibility
+  const Plan = getPlanModel();
+  await Plan.findOneAndUpdate(
+    { code: "GROWTH" },
+    {
+      name: "Growth",
+      code: "GROWTH",
+      description: "For growing businesses",
+      isActive: true,
+      price: 999,
+      billingCycle: "monthly",
+      maxUsers: 25,
+      maxProducts: 5,
+      isTrialPlan: false,
+      trialDays: 0,
+    },
+    { upsert: true, new: true }
+  );
+
+  await Plan.findOneAndUpdate(
+    { code: "ENTERPRISE" },
+    {
+      name: "Enterprise",
+      code: "ENTERPRISE",
+      description: "For large-scale operations",
+      isActive: true,
+      price: 4999,
+      billingCycle: "monthly",
+      maxUsers: 0,     // 0 = unlimited
+      maxProducts: 0,  // 0 = unlimited
+      isTrialPlan: false,
+      trialDays: 0,
+    },
+    { upsert: true, new: true }
+  );
+
+  console.log("  ✅ Plans seeded: STARTER_TRIAL, GROWTH, ENTERPRISE");
+
+  // ── 8. BACKFILL SUBSCRIPTIONS FOR ALL SEEDED TENANTS ───────────────────────
+  console.log("🔗 Backfilling subscriptions for all tenants...");
+
+  const allTenants = await Tenant.find({ isActive: true }).lean();
+
+  const results = await Promise.allSettled(
+    allTenants.map((tenant) => initializeTenantBilling(tenant._id))
+  );
+
+  const succeeded = results.filter((r) => r.status === "fulfilled").length;
+  const failed    = results.filter((r) => r.status === "rejected");
+
+  console.log(`  ✅ Subscriptions backfilled: ${succeeded}/${allTenants.length}`);
+  if (failed.length > 0) {
+    failed.forEach((f, i) => console.warn(`  ⚠️  Tenant ${i} failed:`, f.reason?.message));
+  }
 
   // ── DONE ───────────────────────────────────────────────────────────────────
   console.log("\n✅ Seed Complete!");

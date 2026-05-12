@@ -46,9 +46,20 @@ export const initializeTenantBilling = async (tenantId, session = null) => {
 
 export const getTenantSubscription = async (tenantId) => {
   const TenantSubscription = getTenantSubscriptionModel();
-  const subscription = await TenantSubscription.findOne({ tenantId })
+  let subscription = await TenantSubscription.findOne({ tenantId })
     .populate("planId")
     .lean();
+
+  // Self-healing: if no subscription exists, auto-provision the default trial plan.
+  // This safely covers tenants created before the billing module existed.
+  // initializeTenantBilling uses upsert:true — safe under concurrency.
+  if (!subscription) {
+    await initializeTenantBilling(tenantId);
+    subscription = await TenantSubscription.findOne({ tenantId })
+      .populate("planId")
+      .lean();
+  }
+
   return subscription;
 };
 

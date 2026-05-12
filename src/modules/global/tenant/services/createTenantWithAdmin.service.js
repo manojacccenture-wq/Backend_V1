@@ -68,6 +68,7 @@ export const createTenantWithAdmin = async ({
 
     // 🔹 2. USER
     const user = await createUserIfNotExists(email, password, session);
+    console.log('user: ', user)
 
     // ⚡ 3. Redis fast check
     const ownerKey = `user:${user._id}:ownerTenant`;

@@ -114,7 +114,8 @@ export const createUserIfNotExists = async (email, password, session) => {
       [{ email, password: hashedPassword }],
       { session }
     );
-
+    
+    console.log('users: ', users)
     user = users[0];
   }
 
