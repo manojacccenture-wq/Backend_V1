@@ -5,6 +5,7 @@ import { getUserModel } from "../../users/models/user.model.js";
 import { getMembershipModel } from "../../membership/models/membership.model.js";
 import { hashPassword } from "../../../../shared/services/hashPassword/hash.service.js";
 import { getGlobalDB } from "../../../../config/db/db.js";
+import { initializeTenantBilling } from "../../plans/services/subscription.service.js";
 
 const slugify = (name) =>
   name
@@ -142,6 +143,9 @@ export const createTenantService = async ({
       ],
       { session }
     );
+
+    // 🔥 6. INITIALIZE BILLING / SUBSCRIPTION
+    await initializeTenantBilling(tenantId, session);
 
     await session.commitTransaction();
     session.endSession();

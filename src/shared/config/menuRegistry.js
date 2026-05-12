@@ -28,6 +28,7 @@ export const SUPER_ADMIN_MENU = [
 
 export const TENANT_BASE_MENU = [
   { id: "dashboard", label: "Overview", path: "", requiredAction: null },
+  { id: "billing", label: "Billing", path: "/billing", requiredAction: null },
   { id: "logout", label: "Logout", path: "/logout", requiredAction: null },
 ];
 // ─── TENANT BASE MENU (Common across all tenant users) ──────────────────────

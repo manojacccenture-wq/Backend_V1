@@ -6,6 +6,7 @@ import tenantRoutes from "./tenant/tenant.routes.js"
 import iamRoutes from "./iam/iam.routes.js"
 import roleRoutes from "./roles/role.routes.js"
 import demoRequestRoutes from "./demoRequest/demo.routes.js";
+import billingRoutes from "./billing/billing.routes.js";
 
 const app = express();
 
@@ -18,5 +19,6 @@ app.use("/api/tenant", tenantRoutes);
 app.use("/api/iam", iamRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/demo-request", demoRequestRoutes);
+app.use("/api/billing", billingRoutes);
 
 export default app;
