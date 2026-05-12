@@ -7,6 +7,7 @@ import { getUserProductModel } from "../../modules/global/userProduct/models/use
 import { getUserModel } from "../../modules/global/users/models/user.model.js";
 import { getPolicyModel } from "../../modules/iam/models/policy.model.js";
 import { getRolePolicyModel } from "../../modules/iam/models/rolePolicy.model.js";
+import {getDemoRequestModel} from "../../modules/demoRequest/models/demoRequest.model.js";
 
 
 export const initModels = () => {
@@ -25,6 +26,6 @@ export const initModels = () => {
   // Register IAM Models
   getPolicyModel();
   getRolePolicyModel();
-
+  getDemoRequestModel();
   console.log("✅ Models initialized");
 };

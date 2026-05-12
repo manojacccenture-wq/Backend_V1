@@ -4,6 +4,7 @@ import { getTenantModel } from "../models/tenant.model.js";
 import { getUserModel } from "../../users/models/user.model.js";
 import { getMembershipModel } from "../../membership/models/membership.model.js";
 import { hashPassword } from "../../../../shared/services/hashPassword/hash.service.js";
+import { getGlobalDB } from "../../../../config/db/db.js";
 
 const slugify = (name) =>
   name
@@ -12,28 +13,28 @@ const slugify = (name) =>
     .slice(0, 10);
 
 
-export const createTenant = async (data,session) => {
+export const createTenant = async (data, session) => {
   const Tenant = getTenantModel();
 
-const tenant = await Tenant.create(
-  [
-    {
-      name: data.name,
-      dataMode: data.dataMode,
-      dbName:
-        data.dataMode === "isolated"
-          ? `tenant_${slugify(data.name)}_${crypto
+  const tenant = await Tenant.create(
+    [
+      {
+        name: data.name,
+        dataMode: data.dataMode,
+        dbName:
+          data.dataMode === "isolated"
+            ? `tenant_${slugify(data.name)}_${crypto
               .randomBytes(3)
               .toString("hex")}`
-          : null,
-      isActive: true,
-    },
-  ],
-  { session }
-);
+            : null,
+        isActive: true,
+      },
+    ],
+    { session }
+  );
 
 
-return tenant[0];
+  return tenant[0];
 };
 
 export const createTenantDatabase = async (dbName) => {
@@ -60,7 +61,12 @@ export const createTenantService = async ({
   roleId,
   dataMode = "shared",
 }) => {
-  const session = await mongoose.startSession();
+  
+  
+  
+  
+  
+  const session = await getGlobalDB().startSession();
   session.startTransaction();
 
   try {
@@ -74,6 +80,8 @@ export const createTenantService = async ({
     }
 
     // 🔥 2. CREATE TENANT
+    
+    
     const tenant = await Tenant.create(
       [
         {
@@ -88,8 +96,10 @@ export const createTenantService = async ({
       ],
       { session }
     );
+    
 
     const tenantId = tenant[0]._id;
+    
 
     // 🔥 3. CHECK USER
     let user = await User.findOne({ email }).session(session);

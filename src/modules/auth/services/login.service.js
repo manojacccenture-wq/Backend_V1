@@ -25,7 +25,7 @@ export const loginService = async (email, password) => {
     return {
       emailOtpRequired: !session.mfaEnabled,
       mfaRequired: session.mfaEnabled,
-      token: generateTempToken(session.userId, session.mfaEnabled ? "mfa" : "email_otp"),
+      token: generateTempToken(session.userId, session.mfaEnabled ? "mfa" : "email_otp",email),
     };
   }
 
@@ -44,7 +44,7 @@ export const loginService = async (email, password) => {
   // =========================
 
   if (user.mfaEnabled) {
-    const token = generateTempToken(user._id, "mfa");
+    const token = generateTempToken(user._id, "mfa",user.email);
 
     await redis.setEx(
       `auth:session:${user._id}`,
@@ -94,7 +94,7 @@ export const loginService = async (email, password) => {
       })
     );
 
-    const token = generateTempToken(user._id, "email_otp");
+    const token = generateTempToken(user._id, "email_otp",user.email);
 
     return {
       emailOtpRequired: true,

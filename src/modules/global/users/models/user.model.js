@@ -47,10 +47,22 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  role: {
+    type: String,
+    enum: ['SYSTEM_ADMIN', 'TENANT_USER'],
+    default: 'TENANT_USER',
+  },
 
 }
   , { timestamps: true }
 );
+
+// Pro-Tip: Role Identification
+userSchema.statics.isSystemAdmin = async function (email) {
+  if (!email) return false;
+  const user = await this.findOne({ email: email.toLowerCase() });
+  return user?.role === 'SYSTEM_ADMIN';
+};
 
 export const getUserModel = () => {
   const db = getGlobalDB();

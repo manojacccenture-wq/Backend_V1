@@ -24,6 +24,7 @@ export const login = asyncHandler(async (req, res) => {
 
 
   const result = await loginService(email, password);
+  
 
   if (result.mfaRequired) {
     setTempAuthCookie(res, result.token);
@@ -39,8 +40,12 @@ export const login = asyncHandler(async (req, res) => {
 export const enableMFA = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
   const email = req.user.email;
+  
+  
+  
 
-  if (!userId || !email) {
+
+  if (!userId /* || !email */) {
     throw new Error("Invalid user context");
   }
 
@@ -67,6 +72,7 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
 
   //  STEP 1: verify user
   const user = await verifyLoginService(userId, token, type);
+  
 
   // STEP 2: build initial context (Global or Default)
   const context = await buildUserContext(user._id);
@@ -147,9 +153,9 @@ export const logout = asyncHandler(async (req, res) => {
       // Delete other session keys
       await redis.del(`auth:session:${decoded.userId}`);
       await redis.del(`refresh:${decoded.userId}:${decoded.sessionId}`);
-      
+
     } catch (err) {
-      console.warn("Invalid token during logout, proceeding to clear cookies.");
+      
     }
   }
 
@@ -223,15 +229,15 @@ export const getSidebarMenu = asyncHandler(async (req, res) => {
   }
 
   const activeProductCode = req.headers["x-product-id"] || null;
-  console.log('activeProductCode: ', activeProductCode)
   
+
   // Dynamically compute the menu for this specific product + role combo
   const permissions = context.permissions || [];
   const products = context.products || [];
   const isSuperAdmin = context.isSuperAdmin || false;
-  console.log('permissions: ', permissions)
-  console.log('products: ', products)
-  console.log('isSuperAdmin: ', isSuperAdmin)
+  
+  
+  
 
   const menu = buildUserMenu(permissions, products, isSuperAdmin, activeProductCode);
 
