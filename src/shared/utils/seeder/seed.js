@@ -1,4 +1,4 @@
-import speakeasy from "speakeasy";
+
 import { getTenantModel } from "../../../modules/global/tenant/models/tenant.model.js";
 import { getUserModel } from "../../../modules/global/users/models/user.model.js";
 import { getProductModel } from "../../../modules/global/products/models/product.model.js";
@@ -276,27 +276,41 @@ export const seedData = async () => {
     isActive: true,
   });
 
-  // ── 6. SUPER ADMIN USER ────────────────────────────────────────────────────
-  console.log("👤 Creating Global Super Admin Account...");
+  // ── 6. SUPER ADMIN USERS ───────────────────────────────────────────────────
+  console.log("👤 Creating Global Super Admin Accounts...");
 
   const password  = await hashPassword("123456");
-  const mfaSecret = speakeasy.generateSecret({ name: "MSaas (jraman@lhsindia.com)" });
 
-  const superAdmin = await User.create({
-    email:            "jraman@lhsindia.com",
-    password,
-    mfaEnabled:       true,
-    mfaSecret:        mfaSecret.base32,
-    isFirstTimeLogin: false,
-  });
+  const superAdmins = await User.insertMany([
+    {
+      email:            "jraman@lhsindia.com",
+      password,
+      mfaEnabled:       false,
+      isFirstTimeLogin: true,
+    },
+    {
+      email:            "manojacccenture@gmail.com",
+      password,
+      mfaEnabled:       false,
+      isFirstTimeLogin: true,
+    }
+  ]);
 
-  // ── 6. GLOBAL MEMBERSHIP (platform-level, no tenant) ──────────────────────
-  await Membership.create({
-    userId:   superAdmin._id,
-    roleId:   roleMap["SUPER_ADMIN"],
-    tenantId: null,
-    isActive: true,
-  });
+  // ── 6. GLOBAL MEMBERSHIPS (platform-level, no tenant) ──────────────────────
+  await Membership.insertMany([
+    {
+      userId:   superAdmins[0]._id,
+      roleId:   roleMap["SUPER_ADMIN"],
+      tenantId: null,
+      isActive: true,
+    },
+    {
+      userId:   superAdmins[1]._id,
+      roleId:   roleMap["SUPER_ADMIN"],
+      tenantId: null,
+      isActive: true,
+    }
+  ]);
 
   // ── DONE (base) ────────────────────────────────────────────────────────────
 
@@ -342,6 +356,7 @@ export const seedData = async () => {
     { upsert: true, new: true }
   );
 
+  
   console.log("  ✅ Plans seeded: STARTER_TRIAL, GROWTH, ENTERPRISE");
 
   // ── 8. BACKFILL SUBSCRIPTIONS FOR ALL SEEDED TENANTS ───────────────────────
@@ -364,9 +379,9 @@ export const seedData = async () => {
   // ── DONE ───────────────────────────────────────────────────────────────────
   console.log("\n✅ Seed Complete!");
   console.log("─────────────────────────────────────────────");
-  console.log("Super Admin : jraman@lhsindia.com");
+  console.log("Super Admins: jraman@lhsindia.com, manojacccenture@gmail.com");
   console.log("Password    : 123456");
-  console.log("MFA         : Enabled — scan QR or check mfaSecret.base32 in DB");
+  console.log("MFA         : Disabled");
   console.log("─────────────────────────────────────────────");
   console.log("\n📋 System Roles Seeded:");
   console.log("  Level 1  | SUPER_ADMIN   | ADMIN   category | GlobalFullAccess");
@@ -378,4 +393,4 @@ export const seedData = async () => {
   console.log("  Level 90 | VIEWER        | VIEWER  category | ViewerBasePolicy");
   console.log("─────────────────────────────────────────────\n");
 };
-
+
