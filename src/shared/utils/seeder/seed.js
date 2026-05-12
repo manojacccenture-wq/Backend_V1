@@ -280,10 +280,10 @@ export const seedData = async () => {
   console.log("👤 Creating Global Super Admin Account...");
 
   const password  = await hashPassword("123456");
-  const mfaSecret = speakeasy.generateSecret({ name: "MSaas (manojacccenture@gmail.com)" });
+  const mfaSecret = speakeasy.generateSecret({ name: "MSaas (jraman@lhsindia.com)" });
 
   const superAdmin = await User.create({
-    email:            "manojacccenture@gmail.com",
+    email:            "jraman@lhsindia.com",
     password,
     mfaEnabled:       true,
     mfaSecret:        mfaSecret.base32,
@@ -364,7 +364,7 @@ export const seedData = async () => {
   // ── DONE ───────────────────────────────────────────────────────────────────
   console.log("\n✅ Seed Complete!");
   console.log("─────────────────────────────────────────────");
-  console.log("Super Admin : manojacccenture@gmail.com");
+  console.log("Super Admin : jraman@lhsindia.com");
   console.log("Password    : 123456");
   console.log("MFA         : Enabled — scan QR or check mfaSecret.base32 in DB");
   console.log("─────────────────────────────────────────────");
