@@ -1,7 +1,7 @@
 import * as userService from "../../services/user.service.js";
 
 export const createUser = async (req, res) => {
-  const { email, password, role } = req.body; // 'role' contains the Role ID from the frontend
+  const { email, password, roleId, businessRoleId } = req.body; // allow both old roleId and new businessRoleId
   const tenantId = req.context?.tenantId;
 
   // 🔥 Call with individual arguments as defined in service
@@ -9,7 +9,8 @@ export const createUser = async (req, res) => {
     email,
     password,
     tenantId,
-    role
+    roleId || null,
+    businessRoleId || null
   );
 
   res.json({

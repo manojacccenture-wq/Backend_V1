@@ -11,7 +11,7 @@ const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 
-export const createTenantUser = async (email, password, tenantId, roleId, session) => {
+export const createTenantUser = async (email, password, tenantId, roleId = null, businessRoleId = null, session) => {
 
 
 
@@ -75,6 +75,7 @@ export const createTenantUser = async (email, password, tenantId, roleId, sessio
         userId: user._id,
         tenantId,
         roleId,
+        businessRoleId,
       },
     ],
     { session }
@@ -174,6 +175,7 @@ export const getTenantUsers = async ({ tenantId, page = 1, limit = 10 }) => {
     Membership.find({ tenantId })
       .populate("userId", "email isActive")
       .populate("roleId", "name")
+      .populate("businessRoleId", "name")
       .skip(skip)
       .limit(limit)
       .lean(),

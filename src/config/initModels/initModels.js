@@ -8,6 +8,8 @@ import { getUserModel } from "../../modules/global/users/models/user.model.js";
 import { getPolicyModel } from "../../modules/iam/models/policy.model.js";
 import { getRolePolicyModel } from "../../modules/iam/models/rolePolicy.model.js";
 import {getDemoRequestModel} from "../../modules/demoRequest/models/demoRequest.model.js";
+import { getCapabilityModel } from "../../modules/businessRole/models/capability.model.js";
+import { getBusinessRoleModel } from "../../modules/businessRole/models/businessRole.model.js";
 
 
 export const initModels = () => {
@@ -27,5 +29,8 @@ export const initModels = () => {
   getPolicyModel();
   getRolePolicyModel();
   getDemoRequestModel();
+  // Register Business Role System models
+  getCapabilityModel();
+  getBusinessRoleModel();
   console.log("✅ Models initialized");
 };

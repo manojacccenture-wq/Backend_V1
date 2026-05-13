@@ -8,6 +8,7 @@ import { getTenantProductModel } from "../../tenantProduct/models/tenantProduct.
 import { getUserProductModel } from "../../userProduct/models/userProduct.model.js";
 import { getRedis } from "../../../../config/redis/redis.js";
 import { createUserIfNotExists } from "../../users/services/user.service.js";
+import { seedPresetBusinessRoles } from "../../../businessRole/services/businessRole.service.js";
 
 export const getOwnerRoleId = async () => {
   const redis = getRedis();
@@ -137,7 +138,14 @@ export const createTenantWithAdmin = async ({
     await session.abortTransaction();
     session.endSession();
     throw error;
-  }finally{
+  } finally {
     await redis.del(lockKey);
+    // Seed preset business roles AFTER the transaction is fully committed
+    // (bulkWrite upserts are idempotent — safe to call multiple times)
+    if (typeof tenant !== "undefined") {
+      seedPresetBusinessRoles(tenant._id, user?._id).catch((err) =>
+        console.warn("[BusinessRole] Preset seeding failed (non-fatal):", err.message)
+      );
+    }
   }
 };

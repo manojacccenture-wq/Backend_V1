@@ -12,6 +12,9 @@ import { getPlanModel } from "../../../modules/global/plans/models/plans.model.j
 import { getTenantSubscriptionModel } from "../../../modules/global/plans/models/tenantSubscription.model.js";
 import { ensureDefaultTrialPlan } from "../../../modules/global/plans/services/plan.service.js";
 import { initializeTenantBilling } from "../../../modules/global/plans/services/subscription.service.js";
+import { getCapabilityModel } from "../../../modules/businessRole/models/capability.model.js";
+import { getBusinessRoleModel } from "../../../modules/businessRole/models/businessRole.model.js";
+import { CAPABILITY_REGISTRY } from "../../../modules/businessRole/constants/capabilities.constants.js";
 
 /**
  * Super Admin & IAM Baseline Seeder
@@ -55,7 +58,15 @@ export const seedData = async () => {
     RolePolicy.deleteMany(),
     getPlanModel().deleteMany(),
     getTenantSubscriptionModel().deleteMany(),
+    getCapabilityModel().deleteMany(),
+    getBusinessRoleModel().deleteMany(),
   ]);
+
+  // ── 1b. SEED CAPABILITY REGISTRY ─────────────────────────────────────────
+  console.log("⚡ Seeding Capability Registry...");
+  const Capability = getCapabilityModel();
+  await Capability.insertMany(CAPABILITY_REGISTRY, { ordered: false }).catch(() => {});
+  console.log(`  ✅ ${CAPABILITY_REGISTRY.length} capabilities seeded`);
 
   // ── 2. GLOBAL SYSTEM ROLES (with level + category) ────────────────────────
   console.log("🎭 Creating Global System Roles...");

@@ -1,7 +1,12 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 import { generateAccessToken, generateRefreshToken, hashToken } from "../authUtils/token.utils.js";
 import { getRedis } from "../../../config/redis/redis.js";
+
+export const generateSessionId = () => {
+  return crypto.randomBytes(32).toString("hex"); // 64-char secure id
+};
 
 export const refreshTokenService = async (token) => {
 
@@ -17,6 +22,7 @@ export const refreshTokenService = async (token) => {
   }
 
   
+  console.log('decoded: ', decoded)
   const { userId, sessionId } = decoded;
 
   const redis = getRedis();
@@ -25,28 +31,38 @@ export const refreshTokenService = async (token) => {
 
 
   const sessionData = await redis.get(key);
+  console.log('sessionData: ', sessionData)
+
+  let session;
+  let currentSessionId = sessionId;
+  let activeKey = key;
 
   if (!sessionData) {
-    throw new Error("Session expired");
-  }
+    // Generate new session ID and object if not found
+    currentSessionId = generateSessionId();
+    activeKey = `refresh:${userId}:${currentSessionId}`;
+    session = {
+      createdAt: Date.now(),
+    };
+  } else {
+    session = JSON.parse(sessionData);
 
-  const session = JSON.parse(sessionData);
-
-  // 🔐 Validate token
-  if (session.token !== hashToken(token)) {
-    // await redis.del(key);
-    throw new Error("Token reuse detected");
+    // 🔐 Validate token
+    if (session.token !== hashToken(token)) {
+      // await redis.del(key);
+      throw new Error("Token reuse detected");
+    }
   }
 
   // 🔥 ROTATE TOKEN
   const newAccessToken = generateAccessToken(decoded);
 
-  const newRefreshToken = generateRefreshToken(decoded);
+  const newRefreshToken = generateRefreshToken(decoded, currentSessionId);
 
   // update stored token
   session.token = hashToken(newRefreshToken);
 
-  await redis.set(key, JSON.stringify(session), {
+  await redis.set(activeKey, JSON.stringify(session), {
     EX: 60 * 60 * 24 * 7,
   });
 

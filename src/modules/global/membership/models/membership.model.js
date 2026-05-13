@@ -32,6 +32,15 @@ const membershipSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // ─── Business Role System (NEW — parallel to IAM, additive only) ─────────
+    // IAM roleId above is NEVER modified. This is a separate optional linkage.
+    // null = member uses IAM-only path (all existing memberships)
+    businessRoleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "BusinessRole",
+      default: null,
+    },
   },
   { timestamps: true }
 );
