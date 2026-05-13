@@ -39,7 +39,7 @@ export const login = asyncHandler(async (req, res) => {
 
 export const enableMFA = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
-  
+
   const email = req.user.email;
 
 
@@ -82,8 +82,9 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
   const sessionId = generateSessionId();
   
 
+
   const accessToken = generateAccessToken(user);
-  
+
   const refreshToken = generateRefreshToken(user, sessionId);
 
   // session store
@@ -128,6 +129,7 @@ export const verifyMFASetup = asyncHandler(async (req, res) => {
 
 export const refreshToken = asyncHandler(async (req, res) => {
   const token = req.cookies.refreshToken;
+
 
   const { accessToken, refreshToken } =
     await refreshTokenService(token);

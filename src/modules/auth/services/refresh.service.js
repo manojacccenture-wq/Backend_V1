@@ -10,6 +10,7 @@ export const refreshTokenService = async (token) => {
   }
 
   const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+  
 
   if (decoded.type !== "refresh") {
     throw new Error("Invalid token type");
