@@ -12,6 +12,13 @@ import {
   assignSubscriptionController, 
   getSubscriptionController 
 } from "../../../modules/global/plans/controller/v1/subscription.controller.js";
+import { asyncHandler } from "../../../shared/utils/asyncHandler/asyncHandler.js";
+import { getSuperAdminDashboardStats } from "../../../modules/global/plans/services/dashboardStats.service.js";
+
+const getDashboardStatsController = asyncHandler(async (req, res) => {
+  const stats = await getSuperAdminDashboardStats();
+  res.json({ status: "success", data: stats });
+});
 
 const router = express.Router();
 
@@ -31,6 +38,9 @@ router.delete("/plans/:id", accessAuthMiddleware, deactivatePlanController);
 // Subscriptions management (Super Admin)
 router.post("/subscriptions/assign", accessAuthMiddleware, assignSubscriptionController);
 router.get("/subscriptions/tenant/:tenantId", accessAuthMiddleware, getSubscriptionController);
+
+// Super Admin dashboard aggregation stats
+router.get("/admin/stats", accessAuthMiddleware, getDashboardStatsController);
 
 // ==========================================
 // TENANT ADMIN ROUTES (Requires Tenant Context)
