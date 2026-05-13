@@ -3,6 +3,7 @@ import jwt from  "jsonwebtoken"
 export const tempAuthMiddleware = (req, res, next) => {
   try {
     const token = req.cookies.token;
+    
 
 
     if (!token) {
@@ -10,6 +11,7 @@ export const tempAuthMiddleware = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
     
 
     if (!["mfa", "email_otp"].includes(decoded.type)) {

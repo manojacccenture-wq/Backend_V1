@@ -24,7 +24,7 @@ export const login = asyncHandler(async (req, res) => {
 
 
   const result = await loginService(email, password);
-  
+
 
   if (result.mfaRequired) {
     setTempAuthCookie(res, result.token);
@@ -39,10 +39,11 @@ export const login = asyncHandler(async (req, res) => {
 
 export const enableMFA = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
+  
   const email = req.user.email;
-  
-  
-  
+
+
+
 
 
   if (!userId /* || !email */) {
@@ -72,15 +73,17 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
 
   //  STEP 1: verify user
   const user = await verifyLoginService(userId, token, type);
-  
+
 
   // STEP 2: build initial context (Global or Default)
   const context = await buildUserContext(user._id);
 
   const redis = getRedis();
   const sessionId = generateSessionId();
+  
 
   const accessToken = generateAccessToken(user);
+  
   const refreshToken = generateRefreshToken(user, sessionId);
 
   // session store
@@ -155,7 +158,7 @@ export const logout = asyncHandler(async (req, res) => {
       await redis.del(`refresh:${decoded.userId}:${decoded.sessionId}`);
 
     } catch (err) {
-      
+
     }
   }
 
@@ -229,15 +232,15 @@ export const getSidebarMenu = asyncHandler(async (req, res) => {
   }
 
   const activeProductCode = req.headers["x-product-id"] || null;
-  
+
 
   // Dynamically compute the menu for this specific product + role combo
   const permissions = context.permissions || [];
   const products = context.products || [];
   const isSuperAdmin = context.isSuperAdmin || false;
-  
-  
-  
+
+
+
 
   const menu = buildUserMenu(permissions, products, isSuperAdmin, activeProductCode);
 

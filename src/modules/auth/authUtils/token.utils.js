@@ -13,9 +13,11 @@ export const generateTempToken = (userId, type, email) => {
 
 export const generateAccessToken = (user) => {
   
+  
+  
   return jwt.sign(
     {
-      userId: user._id,
+      userId: user._id||user.userId,
       email: user.email,
       type: "access",
     },
@@ -26,9 +28,12 @@ export const generateAccessToken = (user) => {
 
 
 export const generateRefreshToken = (user,sessionId) => {
+  
+    
   return jwt.sign(
     {
-      userId: user._id,
+      userId: user._id||user.userId,
+      email: user.email,
       sessionId: sessionId, 
       type: "refresh",
     },

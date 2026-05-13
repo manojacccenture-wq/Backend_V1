@@ -15,6 +15,7 @@ export const refreshTokenService = async (token) => {
     throw new Error("Invalid token type");
   }
 
+  
   const { userId, sessionId } = decoded;
 
   const redis = getRedis();
@@ -37,12 +38,9 @@ export const refreshTokenService = async (token) => {
   }
 
   // 🔥 ROTATE TOKEN
-  const newAccessToken = generateAccessToken({ _id: userId });
+  const newAccessToken = generateAccessToken(decoded);
 
-  const newRefreshToken = generateRefreshToken(
-    { _id: userId },
-    sessionId
-  );
+  const newRefreshToken = generateRefreshToken(decoded);
 
   // update stored token
   session.token = hashToken(newRefreshToken);
