@@ -10,7 +10,7 @@ import { getRolePolicyModel } from "../../modules/iam/models/rolePolicy.model.js
 import {getDemoRequestModel} from "../../modules/demoRequest/models/demoRequest.model.js";
 import { getCapabilityModel } from "../../modules/businessRole/models/capability.model.js";
 import { getBusinessRoleModel } from "../../modules/businessRole/models/businessRole.model.js";
-
+import { getPlanModel } from "../../modules/global/plans/models/plans.model.js";
 
 export const initModels = () => {
   console.log("🔄 Initializing models...");
@@ -24,6 +24,7 @@ export const initModels = () => {
 
   getRoleModel();
   getMembershipModel();
+  getPlanModel();
   
   // Register IAM Models
   getPolicyModel();

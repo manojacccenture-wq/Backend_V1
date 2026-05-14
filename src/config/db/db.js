@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { initModels } from "../initModels/initModels.js";
 
 
 let globalConnection;
@@ -12,6 +13,7 @@ export const connectDB = async () => {
 
     sharedConnection = await mongoose.createConnection(process.env.SHARED_DB);
     console.log(" Shared DB Connected");
+    initModels();
   } catch (error) {
     console.error("DB Error:", error);
     process.exit(1);

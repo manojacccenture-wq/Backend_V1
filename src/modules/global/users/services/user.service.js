@@ -74,7 +74,7 @@ export const createTenantUser = async (email, password, tenantId, roleId = null,
       {
         userId: user._id,
         tenantId,
-        roleId,
+        // roleId,
         businessRoleId,
       },
     ],

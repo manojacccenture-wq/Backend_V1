@@ -1,4 +1,3 @@
-
 import { getTenantModel } from "../../../modules/global/tenant/models/tenant.model.js";
 import { getUserModel } from "../../../modules/global/users/models/user.model.js";
 import { getProductModel } from "../../../modules/global/products/models/product.model.js";
@@ -278,6 +277,33 @@ export const seedData = async () => {
     { roleId: roleMap["VIEWER"],        policyId: viewerPolicy._id },
   ]);
 
+  // 🔥 NEW: ── 4b. BASELINE BUSINESS ROLES (NEW SYSTEM) ──────────────────────
+  console.log("💼 Creating Baseline Business Roles...");
+  const BusinessRole = getBusinessRoleModel();
+  const allCapabilityKeys = CAPABILITY_REGISTRY.map(cap => cap.key);
+  
+  const businessRoles = await BusinessRole.insertMany([
+    {
+      name: "Super Admin",
+      description: "Global platform administrator with unrestricted access",
+      tenantId: null,
+      isPreset: true,
+      capabilities: allCapabilityKeys, // Grants every capability in the registry
+    },
+    {
+      name: "Manager",
+      description: "Operational management access",
+      tenantId: null,
+      isPreset: true,
+      capabilities: allCapabilityKeys.filter(cap => !cap.includes("roles") && !cap.includes("policies")),
+    }
+  ]);
+
+  // Build a lookup map for Business Roles: name → _id
+  const businessRoleMap = {};
+  businessRoles.forEach((br) => (businessRoleMap[br.name] = br._id));
+
+
   // ── 5. SEED PRODUCTS ───────────────────────────────────────────────────────
   console.log("🛒 Creating Products...");
   const kitchenApp = await Product.create({
@@ -312,12 +338,14 @@ export const seedData = async () => {
     {
       userId:   superAdmins[0]._id,
       roleId:   roleMap["SUPER_ADMIN"],
+      businessRoleId: businessRoleMap["Super Admin"], // 🔥 NEW: Link to Business Role
       tenantId: null,
       isActive: true,
     },
     {
       userId:   superAdmins[1]._id,
       roleId:   roleMap["SUPER_ADMIN"],
+      businessRoleId: businessRoleMap["Super Admin"], // 🔥 NEW: Link to Business Role
       tenantId: null,
       isActive: true,
     }
@@ -404,4 +432,3 @@ export const seedData = async () => {
   console.log("  Level 90 | VIEWER        | VIEWER  category | ViewerBasePolicy");
   console.log("─────────────────────────────────────────────\n");
 };
-

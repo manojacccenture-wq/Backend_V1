@@ -22,7 +22,7 @@ export const refreshTokenService = async (token) => {
   }
 
   
-  console.log('decoded: ', decoded)
+  
   const { userId, sessionId } = decoded;
 
   const redis = getRedis();
@@ -31,7 +31,7 @@ export const refreshTokenService = async (token) => {
 
 
   const sessionData = await redis.get(key);
-  console.log('sessionData: ', sessionData)
+  
 
   let session;
   let currentSessionId = sessionId;

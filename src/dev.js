@@ -7,7 +7,6 @@ import { initModels } from "./config/initModels/initModels.js";
 import { getCapabilityModel } from "./modules/businessRole/models/capability.model.js";
 import { CAPABILITY_REGISTRY } from "./modules/businessRole/constants/capabilities.constants.js";
 
-
 dotenv.config();
 
 let isConnected = false;
@@ -17,18 +16,6 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   await connectDB();
   await connectRedis();
-  await initModels();
-
-  // ⚡ Idempotent capability boot seeder
-  const Capability = getCapabilityModel();
-  const capCount = await Capability.countDocuments();
-  if (capCount === 0) {
-    const ops = CAPABILITY_REGISTRY.map((cap) => ({
-      updateOne: { filter: { key: cap.key }, update: { $setOnInsert: cap }, upsert: true },
-    }));
-    await Capability.bulkWrite(ops, { ordered: false });
-    console.log(`⚡ Capability registry seeded (${CAPABILITY_REGISTRY.length} entries)`);
-  }
   // await seedData();
 
   app.listen(PORT, () => {

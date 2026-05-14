@@ -14,6 +14,7 @@ import { getMembershipModel } from "../../../global/membership/models/membership
 import { getRoleModel } from "../../../global/roles/models/roles.models.js";
 import { buildUserContext, getUserMemberships } from "../../services/buildUserContext.service.js";
 import { buildUserMenu } from "../../services/buildUserMenu.service.js";
+import { buildUserContext_Business_Role } from "../../services/buildUserContext_Business_Role.service.js";
 
 export const generateSessionId = () => {
   return crypto.randomBytes(32).toString("hex"); // 64-char secure id
@@ -76,7 +77,8 @@ export const verifyLoginMFA = asyncHandler(async (req, res) => {
 
 
   // STEP 2: build initial context (Global or Default)
-  const context = await buildUserContext(user._id);
+  // const context = await buildUserContext(user._id); // FOr I am roles
+  const context=await buildUserContext_Business_Role(user._id); // For I am roles
 
   const redis = getRedis();
   const sessionId = generateSessionId();
@@ -199,7 +201,8 @@ export const getMe = asyncHandler(async (req, res) => {
   // 🔥 Execute both independent queries concurrently using Promise.all
   // This executes them in parallel, halving the I/O wait time if they take similar times.
   const [context, memberships] = await Promise.all([
-    buildUserContext(userId, tenantId),
+    // buildUserContext(userId, tenantId), //for I am roles
+    buildUserContext_Business_Role(userId, tenantId), //for I am roles
     getUserMemberships(userId)
   ]);
 
@@ -213,8 +216,11 @@ export const getMe = asyncHandler(async (req, res) => {
       membershipId: m._id,
       tenantId: m.tenantId ? m.tenantId._id : null,
       tenantName: m.tenantId ? m.tenantId.name : null,
-      role: m.roleId ? m.roleId.code : null,
-      roleName: m.roleId ? m.roleId.name : null,
+      // role: m.roleId ? m.roleId.code : null, // For I am roles
+      // roleName: m.roleId ? m.roleId.name : null, //For Iam roles
+      roleId: m.businessRoleId ? m.businessRoleId._id : null,
+      roleName: m.businessRoleId ? m.businessRoleId.name : null,
+      capabilities: m.businessRoleId ? m.businessRoleId.capabilities : [],
       productId: m.productId ? m.productId._id : null,
       productCode: m.productId ? m.productId.code : null,
       productName: m.productId ? m.productId.name : null,
