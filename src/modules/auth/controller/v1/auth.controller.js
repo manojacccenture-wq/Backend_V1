@@ -12,6 +12,8 @@ import { refreshTokenService } from "../../services/refresh.service.js";
 import { asyncHandler } from "../../../../shared/utils/asyncHandler/asyncHandler.js";
 import { getMembershipModel } from "../../../global/membership/models/membership.model.js";
 import { getRoleModel } from "../../../global/roles/models/roles.models.js";
+import { getUserModel } from "../../../global/users/models/user.model.js";
+import { generateBackupCodesService } from "../../services/backupCode.service.js";
 import { buildUserContext, getUserMemberships } from "../../services/buildUserContext.service.js";
 import { buildUserMenu } from "../../services/buildUserMenu.service.js";
 import { buildUserContext_Business_Role } from "../../services/buildUserContext_Business_Role.service.js";
@@ -118,9 +120,9 @@ export const verifyMFASetup = asyncHandler(async (req, res) => {
   try {
     const { token } = req.body;
 
-    await verifyMFASetupService(req.user.userId, token);
+    const result = await verifyMFASetupService(req.user.userId, token);
 
-    res.json({ msg: "MFA enabled successfully" });
+    res.json({ msg: "MFA enabled successfully", backupCodes: result.backupCodes });
 
   } catch (err) {
     res.status(400).json({ msg: err.message });
@@ -199,11 +201,11 @@ export const getMe = asyncHandler(async (req, res) => {
   const tenantId = req.headers["x-tenant-id"] || null;
 
   // 🔥 Execute both independent queries concurrently using Promise.all
-  // This executes them in parallel, halving the I/O wait time if they take similar times.
-  const [context, memberships] = await Promise.all([
-    // buildUserContext(userId, tenantId), //for I am roles
+  const User = getUserModel();
+  const [context, memberships, userDoc] = await Promise.all([
     buildUserContext_Business_Role(userId, tenantId), //for I am roles
-    getUserMemberships(userId)
+    getUserMemberships(userId),
+    User.findById(userId).select("mfaEnabled backupCodes")
   ]);
 
 
@@ -226,6 +228,8 @@ export const getMe = asyncHandler(async (req, res) => {
       productName: m.productId ? m.productId.name : null,
     })),
     isAuthenticated: true,
+    mfaEnabled: userDoc?.mfaEnabled || false,
+    backupCodeCount: userDoc && userDoc.backupCodes ? userDoc.backupCodes.length : 0,
   });
 });
 
@@ -254,5 +258,76 @@ export const getSidebarMenu = asyncHandler(async (req, res) => {
 
   res.json({
     menu
+  });
+});
+
+export const generateBackupCodes = asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+  if (!userId) throw new Error("Invalid user context");
+
+  const plainCodes = await generateBackupCodesService(userId);
+  
+  res.json({
+    msg: "Backup codes generated successfully",
+    backupCodes: plainCodes
+  });
+});
+
+export const getBackupCodeCount = asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+  if (!userId) throw new Error("Invalid user context");
+
+  const User = getUserModel();
+  const user = await User.findById(userId).select("backupCodes");
+  
+  const count = user && user.backupCodes ? user.backupCodes.length : 0;
+
+  res.json({
+    count
+  });
+});
+
+export const resetMyMfa = asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+  if (!userId) throw new Error("Invalid user context");
+
+  const User = getUserModel();
+  
+  await User.updateOne(
+    { _id: userId },
+    {
+      $set: {
+        mfaEnabled: false,
+        isFirstTimeLogin: true,
+      },
+      $unset: {
+        mfaSecret: "",
+        mfaTempSecret: "",
+      },
+      $pull: {
+        backupCodes: { $exists: true }
+      }
+    }
+  );
+
+  // Clear session to force login
+  const token = req.cookies.refreshToken;
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+      const redis = getRedis();
+
+      if (req.user && req.user.email) {
+        await redis.del(`auth:email:${req.user.email}`);
+      }
+      await redis.del(`auth:session:${decoded.userId}`);
+      await redis.del(`refresh:${decoded.userId}:${decoded.sessionId}`);
+    } catch (err) {}
+  }
+  clearAuthCookie(res);
+
+  res.json({
+    success: true,
+    message: "Your Two-Factor Authentication has been reset. Please login again."
   });
 });

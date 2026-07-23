@@ -9,6 +9,7 @@ import { getUserProductModel } from "../../userProduct/models/userProduct.model.
 import { getRedis } from "../../../../config/redis/redis.js";
 import { createUserIfNotExists } from "../../users/services/user.service.js";
 import { seedPresetBusinessRoles } from "../../../businessRole/services/businessRole.service.js";
+import { getBusinessRoleModel } from "../../../businessRole/models/businessRole.model.js";
 
 export const getOwnerRoleId = async () => {
   const redis = getRedis();
@@ -133,6 +134,24 @@ export const createTenantWithAdmin = async ({
       await createTenantDatabase(tenant.dbName);
     }
 
+    // 🔹 8. SEED PRESET BUSINESS ROLES & ASSIGN TENANT ADMIN
+    await seedPresetBusinessRoles(tenant._id, user._id);
+    
+    // Find the newly seeded Tenant Admin business role
+    const BusinessRole = getBusinessRoleModel();
+    const tenantAdminRole = await BusinessRole.findOne({
+      tenantId: tenant._id,
+      name: "Tenant Admin"
+    });
+
+    if (tenantAdminRole) {
+      // Update the previously created membership with the businessRoleId
+      await Membership.updateOne(
+        { userId: user._id, tenantId: tenant._id },
+        { $set: { businessRoleId: tenantAdminRole._id } }
+      );
+    }
+
     return { tenant, user };
   } catch (error) {
     await session.abortTransaction();
@@ -140,12 +159,5 @@ export const createTenantWithAdmin = async ({
     throw error;
   } finally {
     await redis.del(lockKey);
-    // Seed preset business roles AFTER the transaction is fully committed
-    // (bulkWrite upserts are idempotent — safe to call multiple times)
-    if (typeof tenant !== "undefined") {
-      seedPresetBusinessRoles(tenant._id, user?._id).catch((err) =>
-        console.warn("[BusinessRole] Preset seeding failed (non-fatal):", err.message)
-      );
-    }
   }
 };

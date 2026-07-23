@@ -1,6 +1,7 @@
 import { getUserModel } from "../models/user.model.js";
 import { getMembershipModel } from "../../membership/models/membership.model.js";
 import { hashPassword } from "../../../../shared/services/hashPassword/hash.service.js";
+import { getBusinessRoleModel } from "../../../businessRole/models/businessRole.model.js";
 
 
 // ✅ Email regex
@@ -35,6 +36,15 @@ export const createTenantUser = async (email, password, tenantId, roleId = null,
   }
 
   email = email.trim().toLowerCase();
+
+  // Validate businessRoleId if provided
+  if (businessRoleId) {
+    const BusinessRole = getBusinessRoleModel();
+    const role = await BusinessRole.findOne({ _id: businessRoleId, tenantId }).session(session);
+    if (!role) {
+      throw new Error("Invalid Business Role or Role does not belong to this tenant");
+    }
+  }
 
 
 
@@ -74,7 +84,7 @@ export const createTenantUser = async (email, password, tenantId, roleId = null,
       {
         userId: user._id,
         tenantId,
-        // roleId,
+        roleId,
         businessRoleId,
       },
     ],

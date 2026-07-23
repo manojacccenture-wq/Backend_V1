@@ -1,5 +1,5 @@
 import express from "express";
-import { login ,verifyMFASetup,enableMFA,verifyLoginMFA,refreshToken,logout, getMe, getSidebarMenu} from "../../../modules/auth/controller/v1/auth.controller.js";
+import { login ,verifyMFASetup,enableMFA,verifyLoginMFA,refreshToken,logout, getMe, getSidebarMenu, generateBackupCodes, getBackupCodeCount, resetMyMfa} from "../../../modules/auth/controller/v1/auth.controller.js";
 import { tempAuthMiddleware } from "../../../modules/auth/middleware/temp.middleware.js";
 import { accessAuthMiddleware } from "../../../modules/auth/middleware/access.middleware.js";
 import { mfaSetupMiddleware } from "../../../modules/auth/middleware/mfaSetup.middleware.js";
@@ -19,6 +19,12 @@ router.post("/enable-mfa", accessAuthMiddleware, enableMFA);
 
 //  To Verify the setup of TOTP MFA for the user 
 router.post("/verify-mfa-setup", mfaSetupMiddleware, verifyMFASetup);
+
+// Backup Codes Management
+router.post("/generate-backup-codes", accessAuthMiddleware, generateBackupCodes);
+router.get("/backup-code-count", accessAuthMiddleware, getBackupCodeCount);
+
+router.post("/reset-my-mfa", accessAuthMiddleware, resetMyMfa);
 
 // To get the new accessToken — guard skips rotation when access token is still valid
 router.post("/refresh", refreshGuardMiddleware, refreshToken);

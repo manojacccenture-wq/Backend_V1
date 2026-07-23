@@ -13,7 +13,7 @@ import { ensureDefaultTrialPlan } from "../../../modules/global/plans/services/p
 import { initializeTenantBilling } from "../../../modules/global/plans/services/subscription.service.js";
 import { getCapabilityModel } from "../../../modules/businessRole/models/capability.model.js";
 import { getBusinessRoleModel } from "../../../modules/businessRole/models/businessRole.model.js";
-import { CAPABILITY_REGISTRY } from "../../../modules/businessRole/constants/capabilities.constants.js";
+import { CAPABILITY_REGISTRY, PRESET_BUSINESS_ROLES } from "../../../modules/businessRole/constants/capabilities.constants.js";
 
 /**
  * Super Admin & IAM Baseline Seeder
@@ -295,7 +295,7 @@ export const seedData = async () => {
       description: "Operational management access",
       tenantId: null,
       isPreset: true,
-      capabilities: allCapabilityKeys.filter(cap => !cap.includes("roles") && !cap.includes("policies")),
+      capabilities: PRESET_BUSINESS_ROLES.find(r => r.name === "Manager")?.capabilities || [],
     }
   ]);
 

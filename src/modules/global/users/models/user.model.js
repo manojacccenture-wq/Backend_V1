@@ -6,6 +6,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     lowercase: true,
+    unique: true,
+    index: true,
   },
 
   password: {
@@ -37,6 +39,11 @@ const userSchema = new mongoose.Schema({
     type: String,
   },
   mfaTempSecret: String,
+  
+  backupCodes: {
+    type: [{ type: String }],
+    default: [],
+  },
 
   mfaEnabled: {
     type: Boolean,

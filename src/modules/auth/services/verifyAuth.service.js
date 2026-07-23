@@ -35,21 +35,50 @@ export const verifyLoginService = async (userId, otp, type) => {
   // MFA (TOTP)
   // =========================
   if (type === "mfa") {
+    if (String(otp).length === 9 && String(otp).includes("-")) {
+       // Backup Code Verification Flow (e.g. A3K9-J8L2 is 9 chars)
+       const { verifyPassword } = await import("../../../shared/services/hashPassword/hash.service.js");
+       const { getUserModel } = await import("../../global/users/models/user.model.js");
+       const User = getUserModel();
+       const userDoc = await User.findById(userId).select("backupCodes");
+       if (!userDoc || !userDoc.backupCodes || userDoc.backupCodes.length === 0) {
+         throw new Error("No backup codes available");
+       }
 
-    if (!session.mfaSecret) {
-      throw new Error("MFA not properly configured");
+       let matchedHash = null;
+       for (const hash of userDoc.backupCodes) {
+         const isMatch = await verifyPassword(hash, otp);
+         if (isMatch) {
+           matchedHash = hash;
+           break;
+         }
+       }
+
+       if (!matchedHash) {
+         throw new Error("Invalid backup code");
+       }
+
+       // Invalidate the code immediately
+       await User.updateOne(
+         { _id: userId },
+         { $pull: { backupCodes: matchedHash } }
+       );
+
+    } else {
+       // Standard TOTP Flow
+       if (!session.mfaSecret) {
+         throw new Error("MFA not properly configured");
+       }
+
+       const verified = speakeasy.totp.verify({
+         secret: session.mfaSecret,
+         encoding: "base32",
+         token: String(otp), // 🔥 force string
+         window: 1, // allow 30s before or after
+       });
+       
+       if (!verified) throw new Error("Invalid OTP");
     }
-
-
-    const verified = speakeasy.totp.verify({
-      secret: session.mfaSecret,
-      encoding: "base32",
-      token: String(otp), // 🔥 force string
-      window: 1, // allow 30s before or after
-    });
-    
-
-    if (!verified) throw new Error("Invalid OTP");
   }
 
   // =========================

@@ -64,7 +64,26 @@ export const getTenantUsers = async ({
         as: "role",
       },
     },
-    { $unwind: "$role" },
+    { $unwind: { path: "$role", preserveNullAndEmptyArrays: true } },
+
+    // 🔗 BUSINESS ROLE
+    {
+      $lookup: {
+        from: "businessroles",
+        localField: "businessRoleId",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              name: 1,
+              capabilities: 1,
+            },
+          },
+        ],
+        as: "businessRole",
+      },
+    },
+    { $unwind: { path: "$businessRole", preserveNullAndEmptyArrays: true } },
 
     // 🔍 SEARCH (email)
     ...(search
@@ -82,7 +101,11 @@ export const getTenantUsers = async ({
       $project: {
         userId: "$user._id",
         email: "$user.email",
+        isActive: 1,
+        createdAt: 1,
         role: "$role.code",
+        businessRole: "$businessRole.name",
+        permissions: "$businessRole.capabilities",
       },
     },
 

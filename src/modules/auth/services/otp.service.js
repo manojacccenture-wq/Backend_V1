@@ -28,10 +28,14 @@ const cooldownKey = `auth:otp:cooldown:${user.email}:${user._id}`;
   // ✅ set cooldown (30 sec)
   await redis.set(cooldownKey, "1", { EX: 30 });
 
-  await sendEmail({
+  // 🔥 Optimization: Fire-and-forget email sending to prevent blocking the API response
+  sendEmail({
     to: user.email,
     subject: "Your OTP",
     html: `<b>${otp}</b>`,
+  }).catch((error) => {
+    // Log the error but do not crash the login request
+    console.error(`[Email Failed] Failed to send OTP to ${user.email}:`, error);
   });
 
   return otp;

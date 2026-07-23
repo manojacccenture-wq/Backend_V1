@@ -1,5 +1,6 @@
 import speakeasy from "speakeasy";
 import { getUserModel } from "../../global/users/models/user.model.js";
+import { generateBackupCodesService } from "./backupCode.service.js";
 
 import { getRedis } from "../../../config/redis/redis.js";
 
@@ -45,7 +46,9 @@ const verified = speakeasy.totp.verify({
 
   await redis.del(`mfa:setup:${userId}`);
 
-  return true;
+  const backupCodes = await generateBackupCodesService(userId);
+
+  return { success: true, backupCodes };
   } catch (error) {
     throw error;
   }
