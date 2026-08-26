@@ -16,6 +16,26 @@ const productSchema = new mongoose.Schema(
 
     description: String,
 
+    url: {
+      type: String,
+      required: false, // Ensure backward compatibility with mock data
+    },
+
+    launchType: {
+      type: String,
+      default: "redirect", // "redirect" | "iframe" | "new_tab"
+    },
+
+    isExternal: {
+      type: Boolean,
+      default: true,
+    },
+
+    displayOrder: {
+      type: Number,
+      default: 0,
+    },
+
     isActive: {
       type: Boolean,
       default: true,

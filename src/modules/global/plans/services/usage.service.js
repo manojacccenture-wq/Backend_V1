@@ -1,8 +1,10 @@
 import { getMembershipModel } from "../../membership/models/membership.model.js";
 import { getTenantSubscriptionModel } from "../models/tenantSubscription.model.js";
+import { getTenantProductModel } from "../../tenantProduct/models/tenantProduct.model.js";
 
 export const calculateCurrentUsage = async (tenantId) => {
   const Membership = getMembershipModel();
+  const TenantProduct = getTenantProductModel();
   
   // Active users count
   const currentUsers = await Membership.countDocuments({
@@ -10,15 +12,12 @@ export const calculateCurrentUsage = async (tenantId) => {
     isActive: true,
   });
 
-  // Current products (distinct products for tenant)
-  const productsResult = await Membership.distinct("productId", {
+  // Current products (active products enabled for the tenant)
+  const currentProducts = await TenantProduct.countDocuments({
     tenantId,
-    isActive: true,
-    productId: { $ne: null }
+    isEnabled: true,
   });
   
-  const currentProducts = productsResult.length;
-
   return { currentUsers, currentProducts };
 };
 

@@ -85,7 +85,7 @@ export const buildUserContext_Business_Role = async (userId, tenantId = null) =>
             },
           },
           {
-            $project: { code: 1, name: 1 },
+            $project: { code: 1, name: 1, url: 1, launchType: 1, isExternal: 1 },
           },
         ],
         as: "products",
@@ -119,18 +119,94 @@ export const buildUserContext_Business_Role = async (userId, tenantId = null) =>
 };
 
 /**
- * Utility to fetch all memberships for a user
+ * Utility to fetch all workspaces (memberships + products) for a user
  */
-export const getUserMemberships = async (userId) => {
+export const getUserWorkspaces = async (userId) => {
   const Membership = getMembershipModel();
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
-  return await Membership.find({
-    userId: new mongoose.Types.ObjectId(userId),
-    isActive: true
-  })
-    .select("-__v")
-    .populate("businessRoleId", "name capabilities") // Updated to populate business role
-    .populate("tenantId", "name")
-    .populate("productId", "name code")
-    .lean();
+  return await Membership.aggregate([
+    {
+      $match: {
+        userId: userObjectId,
+        isActive: true,
+      },
+    },
+    {
+      $sort: { tenantId: 1 }
+    },
+    // 🔗 Populate Tenant
+    {
+      $lookup: {
+        from: "tenants",
+        localField: "tenantId",
+        foreignField: "_id",
+        as: "tenant",
+      },
+    },
+    { $unwind: { path: "$tenant", preserveNullAndEmptyArrays: true } },
+    // 🔗 Populate Business Role
+    {
+      $lookup: {
+        from: "businessroles",
+        localField: "businessRoleId",
+        foreignField: "_id",
+        as: "businessRole",
+      },
+    },
+    { $unwind: { path: "$businessRole", preserveNullAndEmptyArrays: true } },
+    // 🔗 Get user products
+    {
+      $lookup: {
+        from: "userproducts",
+        let: { userId: "$userId", tenantId: "$tenantId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$userId", "$$userId"] },
+                  { $eq: ["$tenantId", "$$tenantId"] },
+                  { $eq: ["$isActive", true] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "userProducts",
+      },
+    },
+    // 🔗 Get actual product details
+    {
+      $lookup: {
+        from: "products",
+        let: { productIds: "$userProducts.productId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $in: ["$_id", "$$productIds"] },
+                  { $eq: ["$isActive", true] },
+                ],
+              },
+            },
+          },
+          {
+            $project: { code: 1, name: 1, url: 1, launchType: 1, isExternal: 1 },
+          },
+        ],
+        as: "products",
+      },
+    },
+    // ✅ Final shape
+    {
+      $project: {
+        tenantId: 1,
+        tenantName: "$tenant.name",
+        businessRole: 1,
+        products: 1,
+      },
+    }
+  ]);
 };

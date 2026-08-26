@@ -14,9 +14,9 @@ import { getMembershipModel } from "../../../global/membership/models/membership
 import { getRoleModel } from "../../../global/roles/models/roles.models.js";
 import { getUserModel } from "../../../global/users/models/user.model.js";
 import { generateBackupCodesService } from "../../services/backupCode.service.js";
-import { buildUserContext, getUserMemberships } from "../../services/buildUserContext.service.js";
+import { buildUserContext } from "../../services/buildUserContext.service.js";
 import { buildUserMenu } from "../../services/buildUserMenu.service.js";
-import { buildUserContext_Business_Role } from "../../services/buildUserContext_Business_Role.service.js";
+import { buildUserContext_Business_Role, getUserWorkspaces } from "../../services/buildUserContext_Business_Role.service.js";
 
 export const generateSessionId = () => {
   return crypto.randomBytes(32).toString("hex"); // 64-char secure id
@@ -202,9 +202,9 @@ export const getMe = asyncHandler(async (req, res) => {
 
   // 🔥 Execute both independent queries concurrently using Promise.all
   const User = getUserModel();
-  const [context, memberships, userDoc] = await Promise.all([
+  const [context, workspaces, userDoc] = await Promise.all([
     buildUserContext_Business_Role(userId, tenantId), //for I am roles
-    getUserMemberships(userId),
+    getUserWorkspaces(userId),
     User.findById(userId).select("mfaEnabled backupCodes")
   ]);
 
@@ -214,18 +214,13 @@ export const getMe = asyncHandler(async (req, res) => {
     userId,
     email: req.user.email,
     activeContext: context,
-    memberships: memberships.map(m => ({
-      membershipId: m._id,
-      tenantId: m.tenantId ? m.tenantId._id : null,
-      tenantName: m.tenantId ? m.tenantId.name : null,
-      // role: m.roleId ? m.roleId.code : null, // For I am roles
-      // roleName: m.roleId ? m.roleId.name : null, //For Iam roles
-      roleId: m.businessRoleId ? m.businessRoleId._id : null,
-      roleName: m.businessRoleId ? m.businessRoleId.name : null,
-      capabilities: m.businessRoleId ? m.businessRoleId.capabilities : [],
-      productId: m.productId ? m.productId._id : null,
-      productCode: m.productId ? m.productId.code : null,
-      productName: m.productId ? m.productId.name : null,
+    workspaces: workspaces.map(w => ({
+      tenantId: w.tenantId || null,
+      tenantName: w.tenantName || null,
+      roleId: w.businessRole ? w.businessRole._id : null,
+      roleName: w.businessRole ? w.businessRole.name : null,
+      capabilities: w.businessRole ? w.businessRole.capabilities : [],
+      products: w.products || [],
     })),
     isAuthenticated: true,
     mfaEnabled: userDoc?.mfaEnabled || false,

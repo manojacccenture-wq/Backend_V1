@@ -9,7 +9,9 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://mmsaas.vercel.app"
+  "https://mmsaas.vercel.app",
+  "https://saas.lhs.local",
+  "https://fooderp.lhs.local"
 ];
 
 // const limiter = rateLimit({

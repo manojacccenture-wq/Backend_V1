@@ -1,7 +1,7 @@
 import * as userService from "../../services/user.service.js";
 
 export const createUser = async (req, res) => {
-  const { email, password, roleId, businessRoleId } = req.body; // allow both old roleId and new businessRoleId
+  const { email, password, roleId, businessRoleId, productIds } = req.body; // allow both old roleId and new businessRoleId
   console.log('businessRoleId: ', businessRoleId)
   
   
@@ -14,7 +14,8 @@ export const createUser = async (req, res) => {
     password,
     tenantId,
     roleId || null,
-    businessRoleId || null
+    businessRoleId || null,
+    productIds || []
   );
 
   res.json({

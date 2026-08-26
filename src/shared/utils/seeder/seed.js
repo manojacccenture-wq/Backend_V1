@@ -311,6 +311,9 @@ export const seedData = async () => {
     code: "ANAS_KITCHEN",
     description: "Core restaurant management application",
     isActive: true,
+    url: process.env.FOODERP_URL || "https://fooderp.lhs.local",
+    launchType: "redirect",
+    isExternal: true
   });
 
   // ── 6. SUPER ADMIN USERS ───────────────────────────────────────────────────

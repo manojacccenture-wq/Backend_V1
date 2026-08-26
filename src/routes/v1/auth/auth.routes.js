@@ -35,7 +35,13 @@ router.post("/logout", accessAuthMiddleware, logout);
 // To check user is authenticated or not and to get user details
 router.get("/me", accessAuthMiddleware, getMe);
 
+import { getLaunchToken, postValidateLaunchToken } from "../../../modules/auth/controller/v1/launch.controller.js";
+
 // To get the sidebar menu config based on the user's active context
 router.get("/menu", accessAuthMiddleware, getSidebarMenu);
+
+// SSO Launch Token Endpoints
+router.get("/launch-token", accessAuthMiddleware, getLaunchToken);
+router.post("/validate-launch-token", postValidateLaunchToken);
 
 export default router;

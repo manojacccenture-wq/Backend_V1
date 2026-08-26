@@ -2,6 +2,8 @@ import { getUserModel } from "../models/user.model.js";
 import { getMembershipModel } from "../../membership/models/membership.model.js";
 import { hashPassword } from "../../../../shared/services/hashPassword/hash.service.js";
 import { getBusinessRoleModel } from "../../../businessRole/models/businessRole.model.js";
+import { getTenantProductModel } from "../../tenantProduct/models/tenantProduct.model.js";
+import { getUserProductModel } from "../../userProduct/models/userProduct.model.js";
 
 
 // ✅ Email regex
@@ -12,12 +14,14 @@ const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 
-export const createTenantUser = async (email, password, tenantId, roleId = null, businessRoleId = null, session) => {
+export const createTenantUser = async (email, password, tenantId, roleId = null, businessRoleId = null, productIds = [], session) => {
 
 
 
   const User = getUserModel();
   const Membership = getMembershipModel();
+  const TenantProduct = getTenantProductModel();
+  const UserProduct = getUserProductModel();
 
   //  1. VALIDATIONS
 
@@ -91,7 +95,26 @@ export const createTenantUser = async (email, password, tenantId, roleId = null,
     { session }
   );
 
+  if (productIds && productIds.length > 0) {
+    const validTenantProducts = await TenantProduct.find({
+      tenantId,
+      productId: { $in: productIds },
+      isEnabled: true,
+    }).session(session);
 
+    if (validTenantProducts.length !== productIds.length) {
+      throw new Error("One or more invalid products for this workspace");
+    }
+
+    const userProductsToInsert = productIds.map((prodId) => ({
+      userId: user._id,
+      tenantId,
+      productId: prodId,
+      isActive: true,
+    }));
+
+    await UserProduct.insertMany(userProductsToInsert, { session });
+  }
 
   return user;
 };
