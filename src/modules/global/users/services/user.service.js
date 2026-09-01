@@ -1,3 +1,4 @@
+import { provisionFoodERPUser, deprovisionFoodERPUser } from "../../../../shared/services/fooderp/fooderpProvisioning.service.js";
 import { getUserModel } from "../models/user.model.js";
 import { getMembershipModel } from "../../membership/models/membership.model.js";
 import { hashPassword } from "../../../../shared/services/hashPassword/hash.service.js";
@@ -235,6 +236,9 @@ export const deleteTenantUser = async (userId, tenantId) => {
   const Membership = getMembershipModel();
 
   await Membership.deleteOne({ userId, tenantId });
+
+  // 🔥 DEPROVISION FOODERP USER
+  await deprovisionFoodERPUser(tenantId, userId);
 
   return { success: true };
 };

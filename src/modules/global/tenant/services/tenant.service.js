@@ -59,7 +59,8 @@ export const createTenantService = async ({
   tenantName,
   email,
   password,
-  roleId,
+  roleId = null,
+  businessRoleId = null,
   dataMode = "shared",
 }) => {
   
@@ -138,7 +139,8 @@ export const createTenantService = async ({
         {
           userId: user._id,
           tenantId,
-          roleId, // tenant admin role
+          roleId,
+          businessRoleId, // BusinessRole-based authorization
         },
       ],
       { session }

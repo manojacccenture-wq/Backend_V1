@@ -3,13 +3,7 @@ import { getGlobalDB } from "../../../config/db/db.js";
 
 const demoRequestSchema = new mongoose.Schema(
   {
-    firstName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    lastName: {
+    fullName: {
       type: String,
       required: true,
       trim: true,
@@ -18,7 +12,7 @@ const demoRequestSchema = new mongoose.Schema(
     workEmail: {
       type: String,
       required: true,
-      unique: true,
+      
       lowercase: true,
       trim: true,
     },
@@ -41,7 +35,7 @@ const demoRequestSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "activated", "rejected"],
+      enum: ["pending", "activated", "rejected", "deleted"],
       default: "pending",
     },
 

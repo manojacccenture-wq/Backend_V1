@@ -1,4 +1,5 @@
 import { createTenant, createTenantDatabase } from "./tenant.service.js";
+import { initializeTenantBilling } from "../../plans/services/subscription.service.js";
 import { createMembership } from "../../membership/services/createmembership.service.js";
 import { getGlobalDB } from "../../../../config/db/db.js";
 import { getMembershipModel } from "../../membership/models/membership.model.js";
@@ -9,6 +10,7 @@ import { getUserProductModel } from "../../userProduct/models/userProduct.model.
 import { getRedis } from "../../../../config/redis/redis.js";
 import { createUserIfNotExists } from "../../users/services/user.service.js";
 import { seedPresetBusinessRoles } from "../../../businessRole/services/businessRole.service.js";
+import { provisionFoodERPTenant, provisionFoodERPUser } from "../../../../shared/services/fooderp/fooderpProvisioning.service.js";
 import { getBusinessRoleModel } from "../../../businessRole/models/businessRole.model.js";
 
 export const getOwnerRoleId = async () => {
@@ -123,8 +125,8 @@ export const createTenantWithAdmin = async ({
     await UserProduct.insertMany(userProductsToInsert, { session });
 
     // 🔹 7. MEMBERSHIP
-    // NOTE: Owner role is global for the tenant, so productId is null
-    await createMembership(user._id, tenant._id, ownerRoleId, session);
+    // NOTE: Create with legacy roleId for backward compat, businessRoleId assigned after preset seeding
+    await createMembership(user._id, tenant._id, ownerRoleId, session, null);
 
     await session.commitTransaction();
     session.endSession();
@@ -133,6 +135,9 @@ export const createTenantWithAdmin = async ({
     if (tenant.dataMode === "isolated") {
       await createTenantDatabase(tenant.dbName);
     }
+
+    // 🔹 6. INITIALIZE BILLING (non-trial for Super Admin-created tenants)
+    await initializeTenantBilling(tenant._id, null, false);
 
     // 🔹 8. SEED PRESET BUSINESS ROLES & ASSIGN TENANT ADMIN
     await seedPresetBusinessRoles(tenant._id, user._id);
@@ -151,6 +156,10 @@ export const createTenantWithAdmin = async ({
         { $set: { businessRoleId: tenantAdminRole._id } }
       );
     }
+
+    // 🔥 PROVISION FOODERP USER (non-critical, best-effort)
+    await provisionFoodERPTenant(tenant._id.toString(), tenant.name, email);
+    await provisionFoodERPUser(tenant._id.toString(), user._id.toString(), email, name, "Tenant Admin");
 
     return { tenant, user };
   } catch (error) {

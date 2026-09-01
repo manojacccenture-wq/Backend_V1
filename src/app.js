@@ -8,6 +8,7 @@ import { errorMiddleware } from "./shared/middleware/errorHanlder/error.middlewa
 const app = express();
 
 const allowedOrigins = [
+   "http://localhost:5174",
   "http://localhost:5173",
   "https://mmsaas.vercel.app",
   "https://saas.lhs.local",

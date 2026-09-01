@@ -1,14 +1,14 @@
 import { sendEmail } from "../../../shared/services/email/email.service.js"
 
-const generateRequesterHtml = (firstName) => `
-  <h3>Hello ${firstName},</h3>
+const generateRequesterHtml = (fullName) => `
+  <h3>Hello ${fullName},</h3>
   <p>We have successfully received your demo request! Our team will review it and provision your 14-day trial access shortly.</p>
   <p>Thank you,<br/>MSaaS Team</p>
 `;
 
-const generateSuperAdminHtml = ({ firstName, lastName, companyName, workEmail, phoneNumber, useCase }) => `
+const generateSuperAdminHtml = ({ fullName, companyName, workEmail, phoneNumber, useCase }) => `
   <h3>New Demo Request Alert</h3>
-  <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+  <p><strong>Name:</strong> ${fullName}</p>
   <p><strong>Company:</strong> ${companyName}</p>
   <p><strong>Email:</strong> ${workEmail}</p>
   <p><strong>Phone:</strong> ${phoneNumber || "N/A"}</p>
@@ -16,13 +16,13 @@ const generateSuperAdminHtml = ({ firstName, lastName, companyName, workEmail, p
 `;
 
 export const sendDemoRequestNotifications = (demoData) => {
-  const { firstName, workEmail } = demoData;
+  const { fullName, workEmail } = demoData;
 
   Promise.allSettled([
     sendEmail({
       to: workEmail,
       subject: "Request Received - MSaaS Demo",
-      html: generateRequesterHtml(firstName),
+      html: generateRequesterHtml(fullName),
     }),
     sendEmail({
       to: "manojacccenture@gmail.com",

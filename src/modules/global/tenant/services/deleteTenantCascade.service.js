@@ -10,6 +10,8 @@ import { getBusinessRoleModel } from "../../../businessRole/models/businessRole.
 import { getRoleModel } from "../../roles/models/roles.models.js";
 import { getPolicyModel } from "../../../iam/models/policy.model.js";
 import { getRolePolicyModel } from "../../../iam/models/rolePolicy.model.js";
+import { getDemoRequestModel } from "../../../demoRequest/models/demoRequest.model.js";
+import { deprovisionFoodERPTenant, deprovisionFoodERPUser } from "../../../../shared/services/fooderp/fooderpProvisioning.service.js";
 import { getRedis } from "../../../../config/redis/redis.js";
 
 /**
@@ -72,6 +74,16 @@ export const deleteTenantCascade = async (tenantId) => {
       .lean();
 
     const allUserIds = [...new Set(memberships.map((m) => m.userId.toString()))];
+
+    // ── 2b. Capture user emails before deletion (for DemoRequest cleanup) ──
+    const userEmails = [];
+    if (allUserIds.length > 0) {
+      const usersWithEmail = await User.find({ _id: { $in: allUserIds.map(id => new mongoose.Types.ObjectId(id)) } })
+        .select("email")
+        .session(session)
+        .lean();
+      userEmails.push(...usersWithEmail.map(u => u.email).filter(Boolean));
+    }
 
     // ── 3. Determine exclusive users (no other memberships) ─────────────
     const exclusiveUserIds = [];
@@ -173,7 +185,7 @@ export const deleteTenantCascade = async (tenantId) => {
     await session.commitTransaction();
 
     // ── Phase 2: Post-commit cleanup (non-critical) ────────────────────
-    await postCommitCleanup(tenantId, exclusiveUserIds, summary);
+    await postCommitCleanup(tenantId, exclusiveUserIds, userEmails, summary);
 
     return summary;
   } catch (error) {
@@ -188,7 +200,7 @@ export const deleteTenantCascade = async (tenantId) => {
  * Post-commit cleanup: Redis cache + shared DB settings.
  * These are non-critical — if they fail, the core deletion is already committed.
  */
-const postCommitCleanup = async (tenantId, exclusiveUserIds, summary) => {
+const postCommitCleanup = async (tenantId, exclusiveUserIds, userEmails, summary) => {
   try {
     // ── Redis cache cleanup ─────────────────────────────────────────────
     const redis = getRedis();
@@ -219,6 +231,24 @@ const postCommitCleanup = async (tenantId, exclusiveUserIds, summary) => {
         .deleteMany({ tenantId: new mongoose.Types.ObjectId(tenantId) })
         .catch(() => {});
     }
+
+    // ── DemoRequest status update ────────────────────────────────────────
+    if (userEmails.length > 0) {
+      const DemoRequest = getDemoRequestModel();
+      await DemoRequest.updateMany(
+        { workEmail: { $in: userEmails }, status: "activated" },
+        { $set: { status: "deleted" } }
+      ).catch(() => {});
+    }
+
+    // FoodERP user & tenant deprovision
+    if (exclusiveUserIds.length > 0) {
+      for (const userId of exclusiveUserIds) {
+        await deprovisionFoodERPUser(tenantId, userId.toString());
+      }
+    }
+    // Only need to call this once per tenant, not in a loop!
+    await deprovisionFoodERPTenant(tenantId);
   } catch {
     // Non-critical — log but don't throw
     console.warn("[TENANT_DELETE] Post-commit cleanup encountered non-critical errors");

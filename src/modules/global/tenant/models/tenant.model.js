@@ -10,7 +10,7 @@ const tenantSchema = new mongoose.Schema({
   },
   dbName: {
     type: String,
-    unique: true,
+    // unique: true,
     sparse: true, // because shared tenants may have null
   },
   isActive: {

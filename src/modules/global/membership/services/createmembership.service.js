@@ -4,8 +4,9 @@ import { getMembershipModel } from "../models/membership.model.js";
 export const createMembership = async (
   userId,
   tenantId,
-  roleId,
-  session
+  roleId = null,
+  session,
+  businessRoleId = null
 ) => {
   const Membership = getMembershipModel();
 
@@ -24,6 +25,7 @@ export const createMembership = async (
         userId,
         tenantId,
         roleId,
+        businessRoleId,
       },
     ],
     { session }

@@ -48,24 +48,6 @@ export const getTenantUsers = async ({
     },
     { $unwind: "$user" },
 
-    // 🔗 ROLE
-    {
-      $lookup: {
-        from: "roles",
-        localField: "roleId",
-        foreignField: "_id",
-        pipeline: [
-          {
-            $project: {
-              code: 1,
-            },
-          },
-        ],
-        as: "role",
-      },
-    },
-    { $unwind: { path: "$role", preserveNullAndEmptyArrays: true } },
-
     // 🔗 BUSINESS ROLE
     {
       $lookup: {
@@ -103,9 +85,8 @@ export const getTenantUsers = async ({
         email: "$user.email",
         isActive: 1,
         createdAt: 1,
-        role: "$role.code",
         businessRole: "$businessRole.name",
-        permissions: "$businessRole.capabilities",
+        capabilities: "$businessRole.capabilities",
       },
     },
 

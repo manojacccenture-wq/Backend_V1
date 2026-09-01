@@ -14,7 +14,6 @@ import { getMembershipModel } from "../../../global/membership/models/membership
 import { getRoleModel } from "../../../global/roles/models/roles.models.js";
 import { getUserModel } from "../../../global/users/models/user.model.js";
 import { generateBackupCodesService } from "../../services/backupCode.service.js";
-import { buildUserContext } from "../../services/buildUserContext.service.js";
 import { buildUserMenu } from "../../services/buildUserMenu.service.js";
 import { buildUserContext_Business_Role, getUserWorkspaces } from "../../services/buildUserContext_Business_Role.service.js";
 
@@ -232,7 +231,7 @@ export const getSidebarMenu = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
   const tenantId = req.headers["x-tenant-id"] || null;
 
-  const context = await buildUserContext(userId, tenantId);
+  const context = await buildUserContext_Business_Role(userId, tenantId);
 
   if (!context) {
     return res.status(403).json({ msg: "No active context found" });

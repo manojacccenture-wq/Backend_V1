@@ -6,7 +6,7 @@ import { planSchema } from "../../validation/plan.validation.js";
 export const createPlanController = asyncHandler(async (req, res) => {
   const validationResult = planSchema.safeParse(req.body);
   if (!validationResult.success) {
-    const errorMsg = validationResult.error.errors.map(e => e.message).join(", ");
+    const errorMsg = validationResult.error.issues.map(e => e.message).join(", ");
     throw new Error(`Validation Error: ${errorMsg}`);
   }
 
@@ -22,7 +22,7 @@ export const updatePlanController = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const validationResult = planSchema.safeParse(req.body);
   if (!validationResult.success) {
-    const errorMsg = validationResult.error.errors.map(e => e.message).join(", ");
+    const errorMsg = validationResult.error.issues.map(e => e.message).join(", ");
     throw new Error(`Validation Error: ${errorMsg}`);
   }
 

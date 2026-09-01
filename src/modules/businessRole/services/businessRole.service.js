@@ -1,3 +1,4 @@
+import { updateFoodERPRole } from "../../../shared/services/fooderp/fooderpProvisioning.service.js";
 import mongoose from "mongoose";
 import { getBusinessRoleModel } from "../models/businessRole.model.js";
 import { getMembershipModel } from "../../global/membership/models/membership.model.js";
@@ -159,5 +160,14 @@ export const assignBusinessRoleToMembership = async (membershipId, businessRoleI
   ).lean();
 
   if (!membership) throw new Error("Membership not found");
+  
+  // 🔥 UPDATE FOODERP ROLE
+  if (businessRoleId) {
+    const br = await BusinessRole.findById(businessRoleId);
+    if (br) {
+      await updateFoodERPRole(tenantId.toString(), membership.userId.toString(), br.name);
+    }
+  }
+
   return membership;
 };

@@ -15,7 +15,8 @@ const router = express.Router();
 // ================================
 router.post("/demo-request", demoController.handleDemoRequest);
 router.get("/", accessAuthMiddleware, demoController.getDemoRequests);
-router.post("/:id/approve", accessAuthMiddleware, demoController.approveDemoRequest);
+router.post("/:id/approve", demoController.approveDemoRequest);
 router.post("/:id/reject", accessAuthMiddleware, demoController.rejectDemoRequest);
+router.delete("/:id", accessAuthMiddleware, demoController.deleteDemoRequest);
 
 export default router;

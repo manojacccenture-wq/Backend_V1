@@ -1,13 +1,12 @@
-import dotenv from "dotenv";
+import "dotenv/config.js";
 import app from "./app.js";
+import { startFoodERPIntegrationCron } from "./shared/services/fooderp/fooderpCron.service.js";
 import { connectDB } from "./config/db/db.js";
 import { connectRedis } from "./config/redis/redis.js";
 import { initModels } from "./config/initModels/initModels.js";
 import { seedData } from "./shared/utils/seeder/seed.js";
 import { getCapabilityModel } from "./modules/businessRole/models/capability.model.js";
 import { CAPABILITY_REGISTRY } from "./modules/businessRole/constants/capabilities.constants.js";
-
-dotenv.config();
 
 let isConnected = false;
 

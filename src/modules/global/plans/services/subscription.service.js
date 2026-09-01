@@ -13,7 +13,7 @@ export const assignPlanToTenant = async ({ tenantId, planId, assignedBy = null, 
   let trialEndsAt = null;
   let status = "active";
 
-  if (isTrial || plan.isTrialPlan) {
+  if (isTrial) {
     trialEndsAt = new Date(now.getTime() + (trialDays || plan.trialDays) * 24 * 60 * 60 * 1000);
     status = "trial";
   }
@@ -34,13 +34,13 @@ export const assignPlanToTenant = async ({ tenantId, planId, assignedBy = null, 
   return subscription;
 };
 
-export const initializeTenantBilling = async (tenantId, session = null) => {
+export const initializeTenantBilling = async (tenantId, session = null, isTrial = true) => {
   const defaultPlan = await ensureDefaultTrialPlan();
   return await assignPlanToTenant({
     tenantId,
     planId: defaultPlan._id,
-    isTrial: true,
-    trialDays: defaultPlan.trialDays
+    isTrial,
+    trialDays: isTrial ? defaultPlan.trialDays : 0
   }, session);
 };
 
@@ -54,7 +54,7 @@ export const getTenantSubscription = async (tenantId) => {
   // This safely covers tenants created before the billing module existed.
   // initializeTenantBilling uses upsert:true — safe under concurrency.
   if (!subscription) {
-    await initializeTenantBilling(tenantId);
+    await initializeTenantBilling(tenantId, null, false);
     subscription = await TenantSubscription.findOne({ tenantId })
       .populate("planId")
       .lean();
