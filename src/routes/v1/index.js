@@ -8,8 +8,9 @@ import businessRoleRoutes from "../../modules/businessRole/routes/businessRole.r
 import { accessAuthMiddleware } from "../../modules/auth/middleware/access.middleware.js";
 import { listCapabilities } from "../../modules/businessRole/controller/v1/businessRole.controller.js";
 
-const app = express();
+import integrationRoutes from "../../modules/integration/routes/integration.routes.js";
 
+const app = express();
 
 app.use("/api/auth", authRoutes);
 app.use("/api/tenant", tenantRoutes);
@@ -17,6 +18,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/demo-request", demoRequestRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/business-roles", businessRoleRoutes);
+app.use("/api/integrations", integrationRoutes);
+
 // Dedicated capabilities route — direct handler, no URL-rewrite tricks
 app.get("/api/capabilities", accessAuthMiddleware, listCapabilities);
 

@@ -62,14 +62,17 @@ const getHeaders = () => ({
     "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
 });
 
-const MSAAS_TO_FOODERP_ROLE_MAP = {
-    "Tenant Admin": "Franchisee",
-    "Manager": "Restaurateur",
-    "Staff": "Waiter"
-};
-
 const getFoodERPRole = (msaasRole) => {
-    return MSAAS_TO_FOODERP_ROLE_MAP[msaasRole] || "Waiter";
+    // Top-level Tenant Admins must bootstrap the FoodERP franchise
+    // as a "Franchisee" to avoid administrative lockout.
+    if (msaasRole === "Tenant Admin") {
+        return "Franchisee";
+    }
+
+    // For all other roles (e.g. Staff, Manager), MSAAS no longer maps to 
+    // FoodERP operational roles. We pass an empty string so FoodERP safely 
+    // assigns its own baseline ("Waiter") which a Franchisee can upgrade later.
+    return "";
 };
 
 export const provisionFoodERPTenant = async (tenantId, storeName, email, isRetry = false) => {
@@ -95,17 +98,16 @@ export const provisionFoodERPTenant = async (tenantId, storeName, email, isRetry
     }
 };
 
-export const provisionFoodERPUser = async (tenantId, userId, email, name, msaasRole, isRetry = false) => {
+export const provisionFoodERPUser = async (email, name = null, tenantId = null, appRole = null, isRetry = false) => {
     const url = process.env.FOODERP_BACKEND_URL;
     if (!url) return;
-    
-    const role = getFoodERPRole(msaasRole);
 
+    // Step 1: Create FoodERP user via /api/sso/provision (FoodERP generates its own GUID)
     try {
-        const response = await safeFetch(`${url}/api/sso/provision-user`, {
+        const response = await safeFetch(`${url}/api/sso/provision`, {
             method: "POST",
             headers: getHeaders(),
-            body: JSON.stringify({ tenantId, userId, email, name, role }),
+            body: JSON.stringify({ email, name }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -113,7 +115,26 @@ export const provisionFoodERPUser = async (tenantId, userId, email, name, msaasR
             console.warn(errorMsg);
             throw new Error(errorMsg);
         }
-        return true;
+
+        // Step 2: Create FranchiseeUsers + OperationalRole via /api/sso/provision-user
+        // This endpoint finds the existing user by email and creates the FranchiseeUsers record
+        if (tenantId && appRole) {
+            try {
+                const roleResponse = await safeFetch(`${url}/api/sso/provision-user`, {
+                    method: "POST",
+                    headers: getHeaders(),
+                    body: JSON.stringify({ email, userId: email, tenantId, name, role: appRole }),
+                });
+                const roleData = await roleResponse.json().catch(() => ({}));
+                if (!roleResponse.ok) {
+                    console.warn(`[FoodERP] FranchiseeUsers provision warning: ${roleData.error || roleResponse.statusText}`);
+                }
+            } catch (roleErr) {
+                console.warn(`[FoodERP] FranchiseeUsers provision warning: ${roleErr.message}`);
+            }
+        }
+
+        return data;
     } catch (error) {
         console.warn(`[FoodERP] Network error: ${error.message}`);
         throw error;
@@ -121,26 +142,12 @@ export const provisionFoodERPUser = async (tenantId, userId, email, name, msaasR
 };
 
 export const updateFoodERPRole = async (tenantId, userId, msaasRole, isRetry = false) => {
-    const url = process.env.FOODERP_BACKEND_URL;
-    if (!url) return;
-
-    const role = getFoodERPRole(msaasRole);
-
-    try {
-        const response = await safeFetch(`${url}/api/sso/update-role`, {
-            method: "POST",
-            headers: getHeaders(),
-            body: JSON.stringify({ tenantId, userId, role }),
-        });
-        if (!response.ok && !isRetry) await recordFailure("UPDATE_ROLE", { tenantId, userId, msaasRole }, response.statusText);
-        return response.ok;
-    } catch (error) {
-        if (!isRetry) await recordFailure("UPDATE_ROLE", { tenantId, userId, msaasRole }, error.message);
-        return false;
-    }
+    // Deprecated: MSAAS no longer syncs roles to FoodERP.
+    // FoodERP handles its own operational roles independently.
+    return true;
 };
 
-export const deprovisionFoodERPUser = async (tenantId, userId, isRetry = false) => {
+export const deprovisionFoodERPUser = async (tenantId, userId, email = null, isRetry = false) => {
     const url = process.env.FOODERP_BACKEND_URL;
     if (!url) return;
 
@@ -148,7 +155,7 @@ export const deprovisionFoodERPUser = async (tenantId, userId, isRetry = false) 
         const response = await safeFetch(`${url}/api/sso/deprovision`, {
             method: "POST",
             headers: getHeaders(),
-            body: JSON.stringify({ tenantId, userId }),
+            body: JSON.stringify({ tenantId, userId, email }),
         });
         if (!response.ok && !isRetry) await recordFailure("DEPROVISION_USER", { tenantId, userId }, response.statusText);
         return response.ok;

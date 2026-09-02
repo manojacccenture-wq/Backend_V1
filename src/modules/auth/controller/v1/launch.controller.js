@@ -20,12 +20,34 @@ export const getLaunchToken = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: "x-product-id header is required" });
   }
 
+  // Resolve product: frontend sends product CODE (e.g. "ANAS_KITCHEN"),
+  // but UserProduct.productId expects a MongoDB ObjectId.
+  const { getProductModel } = await import("../../../global/products/models/product.model.js");
+  const { getUserProductModel } = await import("../../../global/userProduct/models/userProduct.model.js");
+  const Product = getProductModel();
+  const UserProduct = getUserProductModel();
+
+  const productDoc = await Product.findOne({ code: productId }).select("_id");
+  if (!productDoc) {
+    return res.status(400).json({ error: `Product not found for code: ${productId}` });
+  }
+  const productObjectId = productDoc._id;
+
+  let appRole = null;
+  if (tenantId) {
+    const userProduct = await UserProduct.findOne({ userId, tenantId, productId: productObjectId });
+    if (userProduct && userProduct.appRole) {
+      appRole = userProduct.appRole;
+    }
+  }
+
   const payload = {
     userId,
     email,
     tenantId,
-    productId,
+    productId: productObjectId.toString(),
     roleId,
+    appRole,
     ip: req.ip,
     userAgent: req.headers["user-agent"]
   };

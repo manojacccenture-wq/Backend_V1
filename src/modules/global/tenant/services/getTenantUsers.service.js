@@ -67,6 +67,28 @@ export const getTenantUsers = async ({
     },
     { $unwind: { path: "$businessRole", preserveNullAndEmptyArrays: true } },
 
+    // 🔗 USER PRODUCTS (applications + appRoles)
+    {
+      $lookup: {
+        from: "userproducts",
+        let: { uid: "$userId", tid: "$tenantId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$userId", "$$uid"] },
+                  { $eq: ["$tenantId", "$$tid"] },
+                  { $eq: ["$isActive", true] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "userProducts",
+      },
+    },
+
     // 🔍 SEARCH (email)
     ...(search
       ? [
@@ -85,8 +107,11 @@ export const getTenantUsers = async ({
         email: "$user.email",
         isActive: 1,
         createdAt: 1,
+        businessRoleId: "$businessRoleId",
         businessRole: "$businessRole.name",
         capabilities: "$businessRole.capabilities",
+        productIds: "$userProducts.productId",
+        appRoles: "$userProducts.appRole",
       },
     },
 

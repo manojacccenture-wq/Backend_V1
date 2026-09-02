@@ -29,6 +29,10 @@ const userProductSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  appRole: {
+    type: String,
+    default: null,
+  },
 
 
 });

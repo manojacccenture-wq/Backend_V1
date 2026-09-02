@@ -6,7 +6,7 @@ export const assignProductToUser = async ({
   userId,
   productId,
   tenantId,
-  role = "user",
+  appRole = null,
 }) => {
   const User = getUserModel();
   const UserProduct = getUserProductModel();
@@ -16,7 +16,7 @@ export const assignProductToUser = async ({
     userId,
     productId,
     tenantId,
-    role,
+    appRole,
   });
 
   // 2. update user cache

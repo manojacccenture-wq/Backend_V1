@@ -1,6 +1,6 @@
 import express from "express";
 import { createTenantController, getTenantsController, getTenantUsersController, deleteTenantController } from "../../../modules/global/tenant/controller/v1/tenant.controller.js";
-import { createUser } from "../../../modules/global/users/controller/v1/user.controller.js";
+import { createUser, updateUser, deleteUser } from "../../../modules/global/users/controller/v1/user.controller.js";
 import { accessAuthMiddleware } from "../../../modules/auth/middleware/access.middleware.js";
 import { contextMiddleware } from "../../../modules/auth/middleware/context.middleware.js";
 
@@ -13,6 +13,8 @@ router.get("/", getTenantsController);
 // User Management under Tenant context
 router.get("/:tenantId/users", accessAuthMiddleware, contextMiddleware, getTenantUsersController);
 router.post("/:tenantId/users", accessAuthMiddleware, contextMiddleware, createUser);
+router.put("/:tenantId/users/:id", accessAuthMiddleware, contextMiddleware, updateUser);
+router.delete("/:tenantId/users/:id", accessAuthMiddleware, contextMiddleware, deleteUser);
 
 // Delete Tenant (Superadmin only)
 router.delete("/:tenantId", accessAuthMiddleware, contextMiddleware, deleteTenantController);
